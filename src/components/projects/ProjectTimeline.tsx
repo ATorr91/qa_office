@@ -90,7 +90,7 @@ export function ProjectTimeline({ project }: { project: Project }) {
 
   return (
     <div className="font-mono">
-      <div className="flex flex-wrap items-start justify-between gap-3 text-[11px]">
+      <div className="flex flex-wrap items-start justify-between gap-3 text-[11px] animate-[fadeSlideUp_0.8s_ease_0.1s_both]">
         <div>
           <div className="uppercase tracking-[0.14em] text-white/45">Inicio</div>
           <div className="mt-0.5 text-[13px] font-semibold text-white">{formatDate(start)}</div>
@@ -123,7 +123,7 @@ export function ProjectTimeline({ project }: { project: Project }) {
         </div>
       </div>
 
-      <div className="relative mt-7 h-2">
+      <div className="relative mt-7 h-2 animate-[fadeSlideUp_0.8s_ease_0.25s_both]">
         <div className="absolute -top-1.5 left-0 right-0 flex justify-between px-px">
           {TICKS.map((t) => (
             <span key={t} className="h-1 w-px bg-white/15" />
@@ -231,7 +231,7 @@ export function ProjectTimeline({ project }: { project: Project }) {
         </div>
       </div>
 
-      <div className="mt-2.5 flex justify-between text-[10px] text-white/45">
+      <div className="mt-2.5 flex justify-between text-[10px] text-white/45 animate-[fadeSlideUp_0.8s_ease_0.35s_both]">
         {PHASES.map((phase, i) => (
           <span key={phase.key} className={i === activePhaseIndex ? "font-semibold text-white" : ""}>
             {phase.label}
@@ -239,7 +239,7 @@ export function ProjectTimeline({ project }: { project: Project }) {
         ))}
       </div>
 
-      <div className="mt-3 flex items-center justify-center gap-3 text-[11px]">
+      <div className="mt-3 flex items-center justify-center gap-3 text-[11px] animate-[fadeSlideUp_0.8s_ease_0.45s_both]">
         <button
           type="button"
           onClick={() => stepTo(-1)}
@@ -265,7 +265,7 @@ export function ProjectTimeline({ project }: { project: Project }) {
         </button>
       </div>
 
-      <div className="mt-2 flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-[10px] text-white/40">
+      <div className="mt-2 flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-[10px] text-white/40 animate-[fadeSlideUp_0.8s_ease_0.55s_both]">
         <Legend swatch={<span className="h-2.5 w-2.5 rounded-full bg-[var(--bp-blue)]" />} label="Fase QA activa" />
         <Legend
           swatch={<span className="h-2.5 w-2.5 rotate-45 border border-[var(--bp-lime)] bg-[var(--bp-lime)]/70" />}
