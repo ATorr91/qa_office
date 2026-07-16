@@ -19,7 +19,7 @@ const KIND_CLASSES: Record<ButtonKind, string> = {
 export function Button({ kind = "primary", className = "", ...props }: ButtonProps) {
   return (
     <button
-      className={`inline-flex items-center gap-2 rounded-[var(--bp-radius-md)] border-2 px-6 py-3 font-bold text-[15px] transition-all duration-[var(--bp-dur)] ease-[var(--bp-ease)] cursor-pointer ${KIND_CLASSES[kind]} ${className}`}
+      className={`inline-flex items-center gap-2 rounded-[var(--bp-radius-md)] border-2 px-6 py-3 font-bold text-[15px] transition-all duration-[var(--bp-dur)] ease-[var(--bp-ease)] cursor-pointer disabled:cursor-not-allowed disabled:opacity-40 ${KIND_CLASSES[kind]} ${className}`}
       {...props}
     />
   );
