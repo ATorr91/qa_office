@@ -21,7 +21,12 @@
       "mcp__24147746-01f6-4f1a-9285-4ea1b453bd7c__list_projects",
       "Bash(npm run *)",
       "Bash(git add *)",
-      "Bash(git commit *)"
+      "Bash(git commit *)",
+      "mcp__24147746-01f6-4f1a-9285-4ea1b453bd7c__deploy_to_vercel",
+      "mcp__24147746-01f6-4f1a-9285-4ea1b453bd7c__get_deployment",
+      "mcp__24147746-01f6-4f1a-9285-4ea1b453bd7c__get_deployment_build_logs",
+      "mcp__24147746-01f6-4f1a-9285-4ea1b453bd7c__get_project",
+      "Bash(cat /tmp/qa-office-dev.log)"
     ]
   }
 }

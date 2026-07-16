@@ -1,0 +1,47 @@
+/* ─────────────────────────────────────────────────────────────
+   BluePixel — Color tokens
+   Source of truth: Brandbook color page (Pantone-mapped swatches).
+   Primary "Pixel Blue" + a 4-hue secondary accent palette, plus
+   the neutral/ink ramp and support surfaces.
+   ───────────────────────────────────────────────────────────── */
+
+:root {
+  /* ── Primary — Pixel Blue (Pantone 801 c) ── */
+  --bp-blue: #16A1CD;          /* logo pixel + primary brand */
+  --bp-blue-600: #1288B0;      /* pressed / darker */
+  --bp-blue-400: #45B8DB;      /* hover / lighter */
+  --bp-blue-tint: rgba(22, 162, 205, 0.10);  /* 10% wash */
+
+  /* ── Mascot cyan (Pixelios body) — brighter aqua ── */
+  --bp-cyan: #00C1D3;
+  --bp-cyan-light: #2DCAD8;
+
+  /* ── Secondary accent palette (Pantone-mapped) ── */
+  --bp-magenta: #BE199A;       /* Pantone 225 C */
+  --bp-lime:    #EDF074;       /* Pantone 100 C */
+  --bp-green:   #88D465;       /* Pantone 360 C */
+  --bp-purple:  #7A39CD;       /* Pantone 266 C */
+
+  /* ── Ink / neutrals ── */
+  --bp-ink:        #212529;    /* wordmark + primary text on light */
+  --bp-ink-soft:   #363F4A;    /* secondary text / captions */
+  --bp-graphite:   #222222;    /* logo mono dark */
+  --bp-navy:       #1E1C67;    /* deep indigo — dividers, dark logo bg */
+  --bp-navy-deep:  #12131F;    /* radial-gradient inner (cover) */
+  --bp-white:      #FFFFFF;
+
+  /* ── Surfaces ── */
+  --bp-surface:      #FFFFFF;  /* card / sheet */
+  --bp-surface-alt:  #F2F3F7;  /* page background, light gray */
+  --bp-surface-navy: #1E1C67;  /* dark section background */
+  --bp-border:       #E4E7EF;  /* hairline on light */
+
+  /* ── Semantic (borrowed from accent palette) ── */
+  --bp-success: #88D465;
+  --bp-warning: #EDF074;
+  --bp-danger:  #BE199A;
+  --bp-info:    #16A1CD;
+
+  /* ── Signature dark gradient (cover / hero) ── */
+  --bp-gradient-cover: radial-gradient(1021px 1568px at 50% 50%, #14135B 0%, #12131F 100%);
+}

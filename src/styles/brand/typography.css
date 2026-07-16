@@ -1,0 +1,37 @@
+/* ─────────────────────────────────────────────────────────────
+   BluePixel — Typography tokens
+   Titles: Red Hat Display · Body/UI: Open Sans · Display: Dela Gothic One
+   Type sizes transcribed from the brandbook specimens.
+   ───────────────────────────────────────────────────────────── */
+
+:root {
+  /* ── Weights (Red Hat Display / Open Sans) ── */
+  --bp-w-regular:  400;
+  --bp-w-medium:   500;
+  --bp-w-semibold: 600;
+  --bp-w-bold:     700;
+  --bp-w-black:    900;
+
+  /* ── Display / title scale (Red Hat Display, tight leading) ── */
+  --bp-text-hero:    64px;   /* section covers */
+  --bp-text-h1:      48px;
+  --bp-text-h2:      40px;
+  --bp-text-h3:      32px;
+  --bp-text-h4:      24px;
+  --bp-text-title:   20px;
+
+  /* ── Body scale (Open Sans) ── */
+  --bp-text-lg:      19px;   /* lead paragraph */
+  --bp-text-base:    16px;
+  --bp-text-sm:      14px;
+  --bp-text-xs:      12px;
+
+  /* ── Leading ── */
+  --bp-leading-tight:  1.0;
+  --bp-leading-snug:   1.2;
+  --bp-leading-normal: 1.5;
+
+  /* ── Tracking ── */
+  --bp-tracking-eyebrow: 0.2em;
+  --bp-tracking-tight:   -0.01em;
+}

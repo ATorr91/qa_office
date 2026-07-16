@@ -1,26 +1,44 @@
 @import "tailwindcss";
+@import "../styles/brand/colors.css";
+@import "../styles/brand/typography.css";
+@import "../styles/brand/spacing.css";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --bp-font-title: var(--font-red-hat-display), "Red Hat Display", -apple-system, sans-serif;
+  --bp-font-body: var(--font-open-sans), "Open Sans", -apple-system, sans-serif;
+  --bp-font-display: var(--font-dela-gothic-one), "Dela Gothic One", sans-serif;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --color-brand-blue: var(--bp-blue);
+  --color-brand-blue-600: var(--bp-blue-600);
+  --color-brand-navy: var(--bp-navy);
+  --color-brand-ink: var(--bp-ink);
+  --color-brand-ink-soft: var(--bp-ink-soft);
+  --color-brand-surface: var(--bp-surface);
+  --color-brand-surface-alt: var(--bp-surface-alt);
+  --color-brand-border: var(--bp-border);
+  --font-title: var(--bp-font-title);
+  --font-body: var(--bp-font-body);
+  --font-display: var(--bp-font-display);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--bp-surface-alt);
+  color: var(--bp-ink);
+  font-family: var(--bp-font-body);
+}
+
+h1, h2, h3, h4 {
+  font-family: var(--bp-font-title);
+  letter-spacing: var(--bp-tracking-tight);
+}
+
+.eyebrow {
+  font-family: var(--bp-font-body);
+  font-weight: 700;
+  font-size: var(--bp-text-xs);
+  text-transform: uppercase;
+  letter-spacing: var(--bp-tracking-eyebrow);
+  color: var(--bp-blue);
 }
