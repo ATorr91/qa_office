@@ -13,14 +13,14 @@ function formatDate(iso: string) {
 
 export function ActionablesList({ actionables }: { actionables: Actionable[] }) {
   return (
-    <ul className="flex flex-col gap-2">
+    <ul className="flex flex-col gap-1.5">
       {actionables.map((a) => (
         <li
           key={a.title}
-          className="flex items-start gap-3 rounded-[var(--bp-radius-md)] border border-[var(--bp-border)] bg-[var(--bp-surface)] px-4 py-3"
+          className="flex items-start gap-2.5 rounded-[var(--bp-radius-sm)] border border-[var(--bp-border)] bg-[var(--bp-surface)] px-3 py-2"
         >
           <span
-            className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 text-[10px] ${
+            className={`mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full border-2 text-[9px] ${
               a.done
                 ? "border-[var(--bp-success)] bg-[var(--bp-success)] text-white"
                 : "border-[var(--bp-border)] text-transparent"
@@ -29,10 +29,10 @@ export function ActionablesList({ actionables }: { actionables: Actionable[] }) 
             ✓
           </span>
           <div className="flex-1">
-            <div className={`text-sm font-medium ${a.done ? "text-[var(--bp-ink-soft)] line-through" : "text-[var(--bp-ink)]"}`}>
+            <div className={`text-[13px] font-medium ${a.done ? "text-[var(--bp-ink-soft)] line-through" : "text-[var(--bp-ink)]"}`}>
               {a.title}
             </div>
-            <div className="mt-0.5 text-xs text-[var(--bp-ink-soft)]">
+            <div className="mt-0.5 font-mono text-[11px] text-[var(--bp-ink-soft)]">
               {a.owner} · vence {formatDate(a.due)}
             </div>
           </div>

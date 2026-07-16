@@ -4,8 +4,8 @@ import { useId, useState } from "react";
 import type { TrendPoint } from "@/lib/projects";
 
 const WIDTH = 560;
-const HEIGHT = 180;
-const PADDING = 24;
+const HEIGHT = 150;
+const PADDING = 20;
 
 export function TrendChart({ data }: { data: TrendPoint[] }) {
   const gradientId = useId();
@@ -76,7 +76,7 @@ export function TrendChart({ data }: { data: TrendPoint[] }) {
 
       {active && (
         <div
-          className="pointer-events-none absolute -translate-x-1/2 -translate-y-full rounded-[var(--bp-radius-sm)] bg-[var(--bp-ink)] px-2.5 py-1.5 text-xs text-white shadow-[var(--bp-shadow-md)]"
+          className="pointer-events-none absolute -translate-x-1/2 -translate-y-full rounded-[var(--bp-radius-sm)] bg-[var(--bp-ink)] px-2 py-1 font-mono text-[11px] text-white shadow-[var(--bp-shadow-md)]"
           style={{ left: `${(active.x / WIDTH) * 100}%`, top: `${(active.y / HEIGHT) * 100}%` }}
         >
           <div className="font-semibold">{active.passRate}% aprobación</div>

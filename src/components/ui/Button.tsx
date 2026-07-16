@@ -1,9 +1,11 @@
 import type { ButtonHTMLAttributes } from "react";
 
 type ButtonKind = "primary" | "outline" | "ghost";
+type ButtonSize = "sm" | "md";
 
 export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   kind?: ButtonKind;
+  size?: ButtonSize;
 }
 
 const KIND_CLASSES: Record<ButtonKind, string> = {
@@ -15,11 +17,21 @@ const KIND_CLASSES: Record<ButtonKind, string> = {
     "bg-transparent text-[var(--bp-ink)] border-transparent hover:bg-[var(--bp-blue-tint)]",
 };
 
+const SIZE_CLASSES: Record<ButtonSize, string> = {
+  sm: "px-2.5 py-1 text-[12px] gap-1.5",
+  md: "px-4 py-2 text-[13px] gap-2",
+};
+
 /** BluePixel button primitive, ported from the marketing site's `Btn` pattern. */
-export function Button({ kind = "primary", className = "", ...props }: ButtonProps) {
+export function Button({
+  kind = "primary",
+  size = "md",
+  className = "",
+  ...props
+}: ButtonProps) {
   return (
     <button
-      className={`inline-flex items-center gap-2 rounded-[var(--bp-radius-md)] border-2 px-6 py-3 font-bold text-[15px] transition-all duration-[var(--bp-dur)] ease-[var(--bp-ease)] cursor-pointer disabled:cursor-not-allowed disabled:opacity-40 ${KIND_CLASSES[kind]} ${className}`}
+      className={`inline-flex items-center rounded-[var(--bp-radius-sm)] border font-semibold transition-all duration-[var(--bp-dur)] ease-[var(--bp-ease)] cursor-pointer disabled:cursor-not-allowed disabled:opacity-40 ${SIZE_CLASSES[size]} ${KIND_CLASSES[kind]} ${className}`}
       {...props}
     />
   );
