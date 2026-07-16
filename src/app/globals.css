@@ -72,3 +72,54 @@ h1, h2, h3, h4 {
     transform: translateY(0);
   }
 }
+
+/* Scrub handle for the interactive project timeline (ProjectTimeline.tsx) */
+.bp-scrub {
+  outline: none;
+}
+.bp-scrub::-webkit-slider-runnable-track {
+  background: transparent;
+  height: 100%;
+}
+.bp-scrub::-moz-range-track {
+  background: transparent;
+  height: 100%;
+}
+.bp-scrub::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 10px;
+  height: 22px;
+  margin-top: 1px;
+  border-radius: 3px;
+  background: white;
+  border: 2px solid var(--bp-navy);
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.25);
+  cursor: grab;
+}
+.bp-scrub::-moz-range-thumb {
+  width: 8px;
+  height: 22px;
+  border-radius: 3px;
+  background: white;
+  border: 2px solid var(--bp-navy);
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.25);
+  cursor: grab;
+}
+.bp-scrub:active::-webkit-slider-thumb {
+  cursor: grabbing;
+}
+
+@media print {
+  aside,
+  header,
+  .no-print {
+    display: none !important;
+  }
+  main {
+    padding: 0 !important;
+  }
+  body {
+    background: white !important;
+  }
+}

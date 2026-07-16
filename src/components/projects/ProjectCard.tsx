@@ -1,13 +1,16 @@
 import Link from "next/link";
 import Badge from "@/components/ui/Badge";
+import ProjectThumbnail from "./ProjectThumbnail";
 import { getStatusBadgeColor, type Project } from "@/lib/projects";
 
 export function ProjectCard({ project }: { project: Project }) {
   return (
     <Link
       href={`/proyectos/${project.id}`}
-      className="flex items-center gap-4 px-4 py-3 transition-colors duration-[var(--bp-dur)] hover:bg-[var(--bp-surface-alt)]"
+      className="flex items-center gap-3 px-4 py-3 transition-colors duration-[var(--bp-dur)] hover:bg-[var(--bp-surface-alt)]"
     >
+      <ProjectThumbnail category={project.category} className="h-10 w-10" />
+
       <div className="min-w-0 flex-1 sm:w-56 sm:flex-none">
         <div className="truncate text-sm font-semibold text-[var(--bp-ink)]">{project.name}</div>
         <div className="mt-0.5 truncate text-[11px] uppercase tracking-[0.06em] text-[var(--bp-ink-soft)]">

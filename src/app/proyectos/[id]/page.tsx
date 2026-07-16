@@ -4,6 +4,8 @@ import Card from "@/components/ui/Card";
 import Badge from "@/components/ui/Badge";
 import ProjectTimeline from "@/components/projects/ProjectTimeline";
 import ActionablesList from "@/components/projects/ActionablesList";
+import TeamCard from "@/components/projects/TeamCard";
+import ReportHistoryPanel from "@/components/projects/ReportHistoryPanel";
 import TrendChart from "@/components/charts/TrendChart";
 import SeverityBarChart from "@/components/charts/SeverityBarChart";
 import { getProjectById, getStatusBadgeColor, PROJECTS } from "@/lib/projects";
@@ -23,7 +25,10 @@ export default async function ProjectDetailPage({
 
   return (
     <div className="flex flex-col gap-5">
-      <Link href="/" className="text-[13px] font-semibold text-[var(--bp-blue)] hover:underline">
+      <Link
+        href="/"
+        className="no-print text-[13px] font-semibold text-[var(--bp-blue)] hover:underline"
+      >
         ← Volver a proyectos
       </Link>
 
@@ -43,7 +48,7 @@ export default async function ProjectDetailPage({
         </div>
 
         <div className="mt-6">
-          <ProjectTimeline startDate={project.startDate} endDate={project.endDate} />
+          <ProjectTimeline project={project} />
         </div>
       </section>
 
@@ -97,6 +102,8 @@ export default async function ProjectDetailPage({
         </p>
       </Card>
 
+      <ReportHistoryPanel project={project} />
+
       <div className="grid grid-cols-1 gap-3 lg:grid-cols-[2fr_1fr]">
         <Card className="p-4">
           <h2 className="text-[13px] font-semibold text-[var(--bp-ink)]">Accionables</h2>
@@ -104,27 +111,7 @@ export default async function ProjectDetailPage({
             <ActionablesList actionables={project.actionables} />
           </div>
         </Card>
-        <Card className="p-4">
-          <h2 className="text-[13px] font-semibold text-[var(--bp-ink)]">Equipo QA</h2>
-          <ul className="mt-3 flex flex-col gap-2.5">
-            {project.team.map((member) => (
-              <li key={member} className="flex items-center gap-2.5">
-                <span className="flex h-7 w-7 items-center justify-center rounded-full bg-[var(--bp-blue-tint)] text-xs font-semibold text-[var(--bp-blue-600)]">
-                  {member
-                    .split(" ")
-                    .map((n) => n[0])
-                    .join("")}
-                </span>
-                <div>
-                  <div className="text-[13px] font-medium text-[var(--bp-ink)]">{member}</div>
-                  {member === project.qaLead && (
-                    <div className="text-[11px] text-[var(--bp-ink-soft)]">QA Lead</div>
-                  )}
-                </div>
-              </li>
-            ))}
-          </ul>
-        </Card>
+        <TeamCard team={project.team} />
       </div>
     </div>
   );

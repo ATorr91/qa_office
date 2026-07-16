@@ -30,6 +30,26 @@ export interface BugsBySeverity {
   low: number;
 }
 
+export interface TeamMember {
+  name: string;
+  role: string;
+}
+
+export interface Release {
+  label: string;
+  date: string;
+  type: "epic" | "release";
+}
+
+export interface ReportEntry {
+  date: string;
+  passRate: number;
+  coverage: number;
+  testsExecuted: number;
+  bugsOpen: number;
+  note: string;
+}
+
 export interface Project {
   id: string;
   name: string;
@@ -40,7 +60,8 @@ export interface Project {
   startDate: string;
   endDate: string;
   qaLead: string;
-  team: string[];
+  team: TeamMember[];
+  releases: Release[];
   lastReportDate: string;
   passRate: number;
   coverage: number;
@@ -65,7 +86,15 @@ export const PROJECTS: Project[] = [
     startDate: "2026-03-01",
     endDate: "2026-08-15",
     qaLead: "Marcela Nuñez",
-    team: ["Marcela Nuñez", "Luis Ortega", "Karla Paredes"],
+    team: [
+      { name: "Marcela Nuñez", role: "QA Lead" },
+      { name: "Luis Ortega", role: "QA Engineer" },
+      { name: "Karla Paredes", role: "Automation Engineer" },
+    ],
+    releases: [
+      { label: "Release 1.0 – Beta cerrada", date: "2026-05-15", type: "release" },
+      { label: "Epic: Pagos con QR", date: "2026-06-20", type: "epic" },
+    ],
     lastReportDate: "2026-07-15",
     passRate: 97,
     coverage: 82,
@@ -102,7 +131,14 @@ export const PROJECTS: Project[] = [
     startDate: "2026-05-01",
     endDate: "2026-09-30",
     qaLead: "Sofía Reyes",
-    team: ["Sofía Reyes", "Iván Solís"],
+    team: [
+      { name: "Sofía Reyes", role: "QA Lead" },
+      { name: "Iván Solís", role: "QA Engineer" },
+    ],
+    releases: [
+      { label: "Release 2.1 – Canje de millas", date: "2026-06-10", type: "release" },
+      { label: "Epic: Rediseño de canje", date: "2026-07-01", type: "epic" },
+    ],
     lastReportDate: "2026-07-14",
     passRate: 88,
     coverage: 70,
@@ -139,7 +175,14 @@ export const PROJECTS: Project[] = [
     startDate: "2026-01-10",
     endDate: "2026-07-20",
     qaLead: "Diego Marín",
-    team: ["Diego Marín", "Karla Paredes"],
+    team: [
+      { name: "Diego Marín", role: "QA Lead" },
+      { name: "Karla Paredes", role: "QA Engineer" },
+    ],
+    releases: [
+      { label: "Release 1.3 – CFDI 4.0", date: "2026-04-20", type: "release" },
+      { label: "Epic: Descuentos combinados", date: "2026-06-15", type: "epic" },
+    ],
     lastReportDate: "2026-07-16",
     passRate: 61,
     coverage: 55,
@@ -176,7 +219,14 @@ export const PROJECTS: Project[] = [
     startDate: "2025-11-01",
     endDate: "2026-06-01",
     qaLead: "Ana Cabrera",
-    team: ["Ana Cabrera", "Iván Solís"],
+    team: [
+      { name: "Ana Cabrera", role: "QA Lead" },
+      { name: "Iván Solís", role: "QA Engineer" },
+    ],
+    releases: [
+      { label: "Epic: Checkout exprés", date: "2026-03-15", type: "epic" },
+      { label: "Release 1.0 – Lanzamiento", date: "2026-06-01", type: "release" },
+    ],
     lastReportDate: "2026-06-01",
     passRate: 95,
     coverage: 88,
@@ -213,7 +263,8 @@ export const PROJECTS: Project[] = [
     startDate: "2026-07-20",
     endDate: "2026-12-01",
     qaLead: "Sofía Reyes",
-    team: ["Sofía Reyes"],
+    team: [{ name: "Sofía Reyes", role: "QA Lead" }],
+    releases: [{ label: "Epic: Gestión de equipos", date: "2026-08-15", type: "epic" }],
     lastReportDate: "—",
     passRate: 0,
     coverage: 0,
@@ -250,7 +301,14 @@ export const PROJECTS: Project[] = [
     startDate: "2026-02-15",
     endDate: "2026-07-30",
     qaLead: "Marcela Nuñez",
-    team: ["Marcela Nuñez", "Diego Marín"],
+    team: [
+      { name: "Marcela Nuñez", role: "QA Lead" },
+      { name: "Diego Marín", role: "Automation Engineer" },
+    ],
+    releases: [
+      { label: "Epic: Sincronización en tiempo real", date: "2026-05-10", type: "epic" },
+      { label: "Release 3.0 – Multi-planta", date: "2026-07-01", type: "release" },
+    ],
     lastReportDate: "2026-07-13",
     passRate: 91,
     coverage: 76,
@@ -287,7 +345,14 @@ export const PROJECTS: Project[] = [
     startDate: "2025-09-01",
     endDate: "2026-03-01",
     qaLead: "Diego Marín",
-    team: ["Diego Marín", "Ana Cabrera"],
+    team: [
+      { name: "Diego Marín", role: "QA Lead" },
+      { name: "Ana Cabrera", role: "QA Engineer" },
+    ],
+    releases: [
+      { label: "Epic: Rutas dinámicas", date: "2025-12-01", type: "epic" },
+      { label: "Release 2.0 – Motor de rutas", date: "2026-02-15", type: "release" },
+    ],
     lastReportDate: "2026-03-01",
     passRate: 93,
     coverage: 85,
@@ -324,7 +389,14 @@ export const PROJECTS: Project[] = [
     startDate: "2026-04-01",
     endDate: "2026-10-15",
     qaLead: "Sofía Reyes",
-    team: ["Sofía Reyes", "Luis Ortega"],
+    team: [
+      { name: "Sofía Reyes", role: "QA Lead" },
+      { name: "Luis Ortega", role: "QA Engineer" },
+    ],
+    releases: [
+      { label: "Release 1.1 – Pedidos en campo", date: "2026-06-01", type: "release" },
+      { label: "Epic: Comisiones", date: "2026-07-05", type: "epic" },
+    ],
     lastReportDate: "2026-07-12",
     passRate: 90,
     coverage: 73,
@@ -361,7 +433,14 @@ export const PROJECTS: Project[] = [
     startDate: "2026-06-01",
     endDate: "2027-01-15",
     qaLead: "Ana Cabrera",
-    team: ["Ana Cabrera", "Karla Paredes"],
+    team: [
+      { name: "Ana Cabrera", role: "QA Lead" },
+      { name: "Karla Paredes", role: "QA Engineer" },
+    ],
+    releases: [
+      { label: "Release 1.0 – MVP", date: "2026-08-01", type: "release" },
+      { label: "Epic: Conciliación de pagos", date: "2026-09-15", type: "epic" },
+    ],
     lastReportDate: "2026-07-11",
     passRate: 85,
     coverage: 60,
@@ -398,7 +477,14 @@ export const PROJECTS: Project[] = [
     startDate: "2026-07-01",
     endDate: "2027-02-28",
     qaLead: "Diego Marín",
-    team: ["Diego Marín", "Iván Solís"],
+    team: [
+      { name: "Diego Marín", role: "QA Lead" },
+      { name: "Iván Solís", role: "Automation Engineer" },
+    ],
+    releases: [
+      { label: "Release 1.0 – Región primaria", date: "2026-09-01", type: "release" },
+      { label: "Epic: Failover multi-región", date: "2026-11-01", type: "epic" },
+    ],
     lastReportDate: "2026-07-15",
     passRate: 100,
     coverage: 20,
@@ -429,6 +515,47 @@ export const PROJECTS: Project[] = [
 
 export function getProjectById(id: string): Project | undefined {
   return PROJECTS.find((p) => p.id === id);
+}
+
+/**
+ * Derives a dated report history from the project's weekly trend, spreading
+ * the existing pass-rate samples across the real start→(today or end) span so
+ * the timeline can correlate a scrubbed date with a plausible historical
+ * snapshot without hand-authoring a parallel dataset.
+ */
+export function getReportHistory(project: Project): ReportEntry[] {
+  const start = new Date(project.startDate).getTime();
+  const end = new Date(project.endDate).getTime();
+  const now = Date.now();
+  const rangeEnd = Math.max(start + 1, Math.min(now, end));
+  const span = rangeEnd - start;
+  const points = project.trend;
+  const n = points.length;
+
+  return points.map((point, i) => {
+    const date = new Date(start + (i / Math.max(1, n - 1)) * span).toISOString();
+    const prev = points[i - 1];
+    let note = "Primer reporte del ciclo.";
+    if (prev) {
+      const delta = point.passRate - prev.passRate;
+      if (delta >= 3) note = "Mejora notable en la tasa de aprobación.";
+      else if (delta <= -3) note = "Regresión detectada, requiere seguimiento.";
+      else note = "Tendencia estable respecto al reporte anterior.";
+    }
+    const coverage = Math.round((project.coverage * (i + 1)) / n);
+    const bugsOpen = Math.max(
+      i === n - 1 ? project.bugsOpen : 0,
+      Math.round(project.bugsOpen * (1 - i / n) + project.bugsOpen * 0.4),
+    );
+    return {
+      date,
+      passRate: point.passRate,
+      coverage,
+      testsExecuted: point.testsExecuted,
+      bugsOpen: i === n - 1 ? project.bugsOpen : bugsOpen,
+      note,
+    };
+  });
 }
 
 export const STATUS_OPTIONS: ProjectStatus[] = [
