@@ -1,0 +1,20 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git -C /Users/alantorres/Desktop/qa_office status)",
+      "Bash(gh auth *)",
+      "Bash(npm -v)",
+      "Bash(vercel --version)",
+      "Bash(git --version)",
+      "Bash(brew list *)",
+      "WebFetch(domain:claude.ai)",
+      "mcp__24147746-01f6-4f1a-9285-4ea1b453bd7c__list_teams",
+      "mcp__24147746-01f6-4f1a-9285-4ea1b453bd7c__import-claude-design-from-url",
+      "Bash(git config *)",
+      "Read(//Users/alantorres/.ssh/**)",
+      "Bash(ssh -T git@github.com -o StrictHostKeyChecking=no -o ConnectTimeout=5)",
+      "Bash(git ls-remote *)",
+      "Bash(npx --yes create-next-app@latest . --typescript --tailwind --eslint --app --src-dir --import-alias \"@/*\" --use-npm --no-turbopack)"
+    ]
+  }
+}
