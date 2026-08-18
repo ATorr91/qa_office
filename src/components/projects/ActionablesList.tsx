@@ -14,9 +14,9 @@ function formatDate(iso: string) {
 export function ActionablesList({ actionables }: { actionables: Actionable[] }) {
   return (
     <ul className="flex flex-col gap-1.5">
-      {actionables.map((a) => (
+      {actionables.map((a, i) => (
         <li
-          key={a.title}
+          key={`${a.title}-${i}`}
           className="flex items-start gap-2.5 rounded-[var(--bp-radius-sm)] border border-[var(--bp-border)] bg-[var(--bp-surface)] px-3 py-2"
         >
           <span

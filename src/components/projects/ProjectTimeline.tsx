@@ -139,11 +139,11 @@ export function ProjectTimeline({ project }: { project: Project }) {
           </div>
 
           {/* release / epic markers */}
-          {project.releases.map((r) => {
+          {project.releases.map((r, i) => {
             const pct = clamp((new Date(r.date).getTime() - start) / span, 0, 1);
             return (
               <div
-                key={r.label}
+                key={`${r.label}-${i}`}
                 className="group absolute top-1/2 -translate-x-1/2 -translate-y-1/2"
                 style={{ left: `${pct * 100}%` }}
               >
@@ -164,11 +164,11 @@ export function ProjectTimeline({ project }: { project: Project }) {
           {/* in-progress actionable markers */}
           {project.actionables
             .filter((a) => !a.done)
-            .map((a) => {
+            .map((a, i) => {
               const pct = clamp((new Date(a.due).getTime() - start) / span, 0, 1);
               return (
                 <div
-                  key={a.title}
+                  key={`${a.title}-${i}`}
                   className="group absolute top-full -translate-x-1/2"
                   style={{ left: `${pct * 100}%`, marginTop: 6 }}
                 >
@@ -300,8 +300,8 @@ export function ProjectTimeline({ project }: { project: Project }) {
         <div className="animate-[bp-fade-in_240ms_ease] rounded-[var(--bp-radius-md)] border border-white/15 bg-white/5 p-3.5">
           <h3 className="font-sans text-[13px] font-semibold text-white">Accionables cercanos</h3>
           <ul className="mt-1.5 flex flex-col gap-1.5">
-            {nearbyActionables.map((a) => (
-              <li key={a.title} className="font-sans text-[12px] text-white/70">
+            {nearbyActionables.map((a, i) => (
+              <li key={`${a.title}-${i}`} className="font-sans text-[12px] text-white/70">
                 <span className={a.done ? "text-white/40 line-through" : ""}>{a.title}</span>
                 <span className="ml-1 text-white/40">· {formatDate(new Date(a.due).getTime())}</span>
               </li>

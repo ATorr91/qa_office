@@ -31,7 +31,7 @@ export function Button({
 }: ButtonProps) {
   return (
     <button
-      className={`inline-flex items-center rounded-[var(--bp-radius-sm)] border font-semibold transition-all duration-[var(--bp-dur)] ease-[var(--bp-ease)] cursor-pointer disabled:cursor-not-allowed disabled:opacity-40 ${SIZE_CLASSES[size]} ${KIND_CLASSES[kind]} ${className}`}
+      className={`inline-flex items-center rounded-[var(--bp-radius-sm)] border font-semibold transition-all duration-[var(--bp-dur)] ease-[var(--bp-ease)] cursor-pointer active:scale-[0.96] disabled:cursor-not-allowed disabled:opacity-40 disabled:active:scale-100 ${SIZE_CLASSES[size]} ${KIND_CLASSES[kind]} ${className}`}
       {...props}
     />
   );

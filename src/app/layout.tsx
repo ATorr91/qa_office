@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { Red_Hat_Display, Open_Sans, Dela_Gothic_One } from "next/font/google";
-import AppShell from "@/components/layout/AppShell";
+import { ProjectsProvider } from "@/lib/store";
 import "./globals.css";
 
 const redHatDisplay = Red_Hat_Display({
@@ -20,8 +20,8 @@ const delaGothicOne = Dela_Gothic_One({
 });
 
 export const metadata: Metadata = {
-  title: "QA Office",
-  description: "Reportes instantáneos de métricas de QA para los proyectos de la empresa",
+  title: "BluePixel Studio",
+  description: "Portal interno: reportes de QA y radar de tendencias para estrategia y diseño",
 };
 
 export default function RootLayout({
@@ -35,7 +35,7 @@ export default function RootLayout({
       className={`${redHatDisplay.variable} ${openSans.variable} ${delaGothicOne.variable} antialiased`}
     >
       <body>
-        <AppShell>{children}</AppShell>
+        <ProjectsProvider>{children}</ProjectsProvider>
       </body>
     </html>
   );

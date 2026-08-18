@@ -2,17 +2,25 @@
 
 import { useMemo, useState } from "react";
 import ProjectCard from "./ProjectCard";
+import ProjectWizard from "./ProjectWizard";
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
+import ConfirmDialog from "@/components/ui/ConfirmDialog";
+import { useProjects } from "@/lib/store";
 import { CATEGORY_OPTIONS, STATUS_OPTIONS, type Project } from "@/lib/projects";
 
 const PAGE_SIZE = 5;
 
-export function ProjectsExplorer({ projects }: { projects: Project[] }) {
+type PendingAction = { kind: "pause" | "delete"; project: Project };
+
+export function ProjectsExplorer() {
+  const { projects, addProject, updateProject, setStatus, removeProject } = useProjects();
   const [query, setQuery] = useState("");
-  const [status, setStatus] = useState<string>("all");
+  const [status, setStatus_] = useState<string>("all");
   const [category, setCategory] = useState<string>("all");
   const [page, setPage] = useState(1);
+  const [wizard, setWizard] = useState<{ mode: "create" | "edit"; project?: Project } | null>(null);
+  const [pending, setPending] = useState<PendingAction | null>(null);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -36,6 +44,16 @@ export function ProjectsExplorer({ projects }: { projects: Project[] }) {
     };
   }
 
+  function confirmPending() {
+    if (!pending) return;
+    if (pending.kind === "delete") {
+      removeProject(pending.project.id);
+    } else {
+      setStatus(pending.project.id, pending.project.status === "Pausado" ? "En curso" : "Pausado");
+    }
+    setPending(null);
+  }
+
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
@@ -51,7 +69,7 @@ export function ProjectsExplorer({ projects }: { projects: Project[] }) {
         />
         <select
           value={status}
-          onChange={(e) => updateFilter(setStatus)(e.target.value)}
+          onChange={(e) => updateFilter(setStatus_)(e.target.value)}
           className="rounded-[var(--bp-radius-sm)] border border-[var(--bp-border)] bg-[var(--bp-surface)] px-3 py-1.5 text-[13px] text-[var(--bp-ink)] outline-none focus:border-[var(--bp-blue)]"
         >
           <option value="all">Todos los estados</option>
@@ -73,9 +91,12 @@ export function ProjectsExplorer({ projects }: { projects: Project[] }) {
             </option>
           ))}
         </select>
-        <span className="text-[12px] text-[var(--bp-ink-soft)] sm:ml-auto">
+        <span className="text-[12px] text-[var(--bp-ink-soft)] sm:mr-auto">
           {filtered.length} proyecto{filtered.length === 1 ? "" : "s"}
         </span>
+        <Button kind="primary" size="sm" onClick={() => setWizard({ mode: "create" })}>
+          + Nuevo proyecto
+        </Button>
       </div>
 
       {paginated.length === 0 ? (
@@ -85,7 +106,13 @@ export function ProjectsExplorer({ projects }: { projects: Project[] }) {
       ) : (
         <Card className="divide-y divide-[var(--bp-border)] overflow-hidden">
           {paginated.map((p) => (
-            <ProjectCard key={p.id} project={p} />
+            <ProjectCard
+              key={p.id}
+              project={p}
+              onEdit={() => setWizard({ mode: "edit", project: p })}
+              onTogglePause={() => setPending({ kind: "pause", project: p })}
+              onDelete={() => setPending({ kind: "delete", project: p })}
+            />
           ))}
         </Card>
       )}
@@ -125,6 +152,41 @@ export function ProjectsExplorer({ projects }: { projects: Project[] }) {
           </Button>
         </div>
       )}
+
+      {wizard && (
+        <ProjectWizard
+          mode={wizard.mode}
+          initial={wizard.project}
+          onClose={() => setWizard(null)}
+          onSubmit={(draft) => {
+            if (wizard.mode === "create") addProject(draft);
+            else if (wizard.project) updateProject(wizard.project.id, draft);
+            setWizard(null);
+          }}
+        />
+      )}
+
+      <ConfirmDialog
+        open={pending !== null}
+        title={
+          pending?.kind === "delete"
+            ? `Eliminar "${pending.project.name}"`
+            : pending?.project.status === "Pausado"
+              ? `Reanudar "${pending?.project.name}"`
+              : `Pausar "${pending?.project.name}"`
+        }
+        description={
+          pending?.kind === "delete"
+            ? "Esta acción no se puede deshacer. Se eliminará el proyecto y toda su información de QA."
+            : pending?.project.status === "Pausado"
+              ? "El proyecto volverá a estado \"En curso\"."
+              : "El proyecto pasará a estado \"Pausado\" hasta que lo reanudes."
+        }
+        confirmLabel={pending?.kind === "delete" ? "Eliminar" : "Confirmar"}
+        danger={pending?.kind === "delete"}
+        onConfirm={confirmPending}
+        onCancel={() => setPending(null)}
+      />
     </div>
   );
 }

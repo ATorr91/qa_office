@@ -8,24 +8,37 @@ function toDateInputValue(iso: string) {
   return iso.slice(0, 10);
 }
 
+function csvCell(value: string | number): string {
+  const s = String(value);
+  return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+}
+
+function csvRow(cells: (string | number)[]): string {
+  return cells.map(csvCell).join(",");
+}
+
 function buildCsv(project: Project, rows: ReturnType<typeof getReportHistory>) {
-  const header = ["fecha", "tasa_aprobacion", "cobertura", "pruebas_ejecutadas", "bugs_abiertos", "nota"];
-  const lines = rows.map((r) =>
-    [
-      toDateInputValue(r.date),
-      r.passRate,
-      r.coverage,
-      r.testsExecuted,
-      r.bugsOpen,
-      `"${r.note.replace(/"/g, '""')}"`,
-    ].join(","),
+  const generatedAt = new Date().toLocaleString("es-MX");
+  const metaLines = [
+    csvRow(["Proyecto", project.name]),
+    csvRow(["Cliente", project.client]),
+    csvRow(["Categoría", project.category]),
+    csvRow(["Estado", project.status]),
+    csvRow(["Rango", `${project.startDate} a ${project.endDate}`]),
+    csvRow(["Generado", generatedAt]),
+    "",
+  ];
+  const header = csvRow(["Fecha", "Tasa de aprobación (%)", "Cobertura (%)", "Pruebas ejecutadas", "Bugs abiertos", "Nota"]);
+  const dataLines = rows.map((r) =>
+    csvRow([toDateInputValue(r.date), r.passRate, r.coverage, r.testsExecuted, r.bugsOpen, r.note]),
   );
-  return [`# ${project.name} — historial de reportes QA`, header.join(","), ...lines].join("\n");
+  return [...metaLines, header, ...dataLines].join("\r\n");
 }
 
 function downloadCsv(project: Project, rows: ReturnType<typeof getReportHistory>) {
   const csv = buildCsv(project, rows);
-  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+  // Prefix a UTF-8 BOM so Excel renders accented characters (á, é, ñ…) correctly.
+  const blob = new Blob(["﻿", csv], { type: "text/csv;charset=utf-8;" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
@@ -87,8 +100,8 @@ export function ReportHistoryPanel({ project }: { project: Project }) {
             className="rounded-[var(--bp-radius-sm)] border border-[var(--bp-border)] bg-[var(--bp-surface)] px-2 py-1 text-[12px] text-[var(--bp-ink)] outline-none focus:border-[var(--bp-blue)]"
           >
             <option value="all">Toda época/release</option>
-            {project.releases.map((r) => (
-              <option key={r.label} value={r.label}>
+            {project.releases.map((r, i) => (
+              <option key={`${r.label}-${i}`} value={r.label}>
                 {r.type === "release" ? "Release" : "Epic"} · {r.label}
               </option>
             ))}
@@ -148,8 +161,8 @@ export function ReportHistoryPanel({ project }: { project: Project }) {
                 </td>
               </tr>
             ) : (
-              filtered.map((r) => (
-                <tr key={r.date} className="border-t border-[var(--bp-border)] font-mono">
+              filtered.map((r, i) => (
+                <tr key={`${r.date}-${i}`} className="border-t border-[var(--bp-border)] font-mono">
                   <td className="py-1.5 pr-4">{toDateInputValue(r.date)}</td>
                   <td className="py-1.5 pr-4">{r.passRate}%</td>
                   <td className="py-1.5 pr-4">{r.coverage}%</td>

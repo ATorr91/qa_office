@@ -5,9 +5,9 @@ import { usePathname } from "next/navigation";
 import Logo from "@/components/brand/Logo";
 
 const NAV_ITEMS = [
-  { label: "Proyectos", href: "/" },
-  { label: "Reportes", href: "/reportes" },
-  { label: "Métricas", href: "/metricas" },
+  { label: "Proyectos", href: "/qa-office" },
+  { label: "Reportes", href: "/qa-office/reportes" },
+  { label: "Métricas", href: "/qa-office/metricas" },
 ];
 
 export function Sidebar() {
@@ -15,15 +15,13 @@ export function Sidebar() {
 
   return (
     <aside className="hidden w-56 shrink-0 flex-col border-r border-[var(--bp-border)] bg-[var(--bp-surface)] px-3 py-4 md:flex">
-      <Logo
-        variant="dark"
-        style={{ transform: "scale(0.72)", transformOrigin: "left center" }}
-        className="pl-1"
-      />
+      <Link href="/" className="pl-1" aria-label="Volver al portal">
+        <Logo variant="dark" style={{ transform: "scale(0.72)", transformOrigin: "left center" }} />
+      </Link>
       <nav className="mt-7 flex flex-col gap-0.5">
         {NAV_ITEMS.map((item) => {
           const active =
-            item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
+            item.href === "/qa-office" ? pathname === "/qa-office" : pathname.startsWith(item.href);
           return (
             <Link
               key={item.href}

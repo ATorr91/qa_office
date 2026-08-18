@@ -1,37 +1,64 @@
+"use client";
+
+import { useState } from "react";
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { useRouter } from "next/navigation";
 import Card from "@/components/ui/Card";
 import Badge from "@/components/ui/Badge";
+import Button from "@/components/ui/Button";
+import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import ProjectTimeline from "@/components/projects/ProjectTimeline";
 import ActionablesList from "@/components/projects/ActionablesList";
 import TeamCard from "@/components/projects/TeamCard";
 import ReportHistoryPanel from "@/components/projects/ReportHistoryPanel";
+import ProjectWizard from "@/components/projects/ProjectWizard";
+import PrintableReport from "@/components/projects/PrintableReport";
 import TrendChart from "@/components/charts/TrendChart";
 import SeverityBarChart from "@/components/charts/SeverityBarChart";
-import { getProjectById, getStatusBadgeColor, PROJECTS } from "@/lib/projects";
+import { useProjects } from "@/lib/store";
+import { getStatusBadgeColor, type Project } from "@/lib/projects";
 
-export function generateStaticParams() {
-  return PROJECTS.map((p) => ({ id: p.id }));
-}
+export function ProjectDetailView({ project }: { project: Project }) {
+  const router = useRouter();
+  const { updateProject, setStatus, removeProject } = useProjects();
+  const [wizardOpen, setWizardOpen] = useState(false);
+  const [pending, setPending] = useState<"pause" | "delete" | null>(null);
 
-export default async function ProjectDetailPage({
-  params,
-}: {
-  params: Promise<{ id: string }>;
-}) {
-  const { id } = await params;
-  const project = getProjectById(id);
-  if (!project) notFound();
+  function confirmPending() {
+    if (pending === "delete") {
+      removeProject(project.id);
+      router.push("/qa-office");
+    } else if (pending === "pause") {
+      setStatus(project.id, project.status === "Pausado" ? "En curso" : "Pausado");
+    }
+    setPending(null);
+  }
 
   return (
-    <div className="flex flex-col gap-5">
-      <Link
-        href="/"
-        className="no-print text-[13px] font-semibold text-[var(--bp-blue)] hover:underline"
-      >
-        ← Volver a proyectos
-      </Link>
+    <div className="bp-anim-page flex flex-col gap-5">
+      <div className="no-print flex flex-wrap items-center justify-between gap-3">
+        <Link href="/qa-office" className="text-[13px] font-semibold text-[var(--bp-blue)] hover:underline">
+          ← Volver a proyectos
+        </Link>
+        <div className="flex gap-2">
+          <Button kind="outline" size="sm" onClick={() => setWizardOpen(true)}>
+            Editar
+          </Button>
+          <Button kind="outline" size="sm" onClick={() => setPending("pause")}>
+            {project.status === "Pausado" ? "Reanudar" : "Pausar"}
+          </Button>
+          <Button
+            kind="outline"
+            size="sm"
+            className="!border-[var(--bp-danger)] !text-[var(--bp-danger)]"
+            onClick={() => setPending("delete")}
+          >
+            Eliminar
+          </Button>
+        </div>
+      </div>
 
+      <div className="flex flex-col gap-5 print:hidden">
       <section
         className="rounded-[var(--bp-radius-lg)] p-5 md:p-6"
         style={{ background: "var(--bp-gradient-cover)" }}
@@ -113,6 +140,45 @@ export default async function ProjectDetailPage({
         </Card>
         <TeamCard team={project.team} />
       </div>
+      </div>
+
+      <PrintableReport project={project} />
+
+      {wizardOpen && (
+        <ProjectWizard
+          mode="edit"
+          initial={project}
+          onClose={() => setWizardOpen(false)}
+          onSubmit={(draft) => {
+            updateProject(project.id, draft);
+            setWizardOpen(false);
+          }}
+        />
+      )}
+
+      <ConfirmDialog
+        open={pending !== null}
+        title={
+          pending === "delete"
+            ? `Eliminar "${project.name}"`
+            : project.status === "Pausado"
+              ? `Reanudar "${project.name}"`
+              : `Pausar "${project.name}"`
+        }
+        description={
+          pending === "delete"
+            ? "Esta acción no se puede deshacer. Se eliminará el proyecto y toda su información de QA."
+            : project.status === "Pausado"
+              ? "El proyecto volverá a estado \"En curso\"."
+              : "El proyecto pasará a estado \"Pausado\" hasta que lo reanudes."
+        }
+        confirmLabel={pending === "delete" ? "Eliminar" : "Confirmar"}
+        danger={pending === "delete"}
+        onConfirm={confirmPending}
+        onCancel={() => setPending(null)}
+      />
     </div>
   );
 }
+
+export default ProjectDetailView;

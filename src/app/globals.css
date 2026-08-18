@@ -85,6 +85,81 @@ h1, h2, h3, h4 {
   }
 }
 
+@keyframes bp-scale-in {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes bp-pop-in {
+  0% {
+    opacity: 0;
+    transform: scale(0.6);
+  }
+  70% {
+    transform: scale(1.06);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes bp-overlay-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Reusable micro-interaction/entrance utilities, applied system-wide. */
+.bp-anim-page {
+  animation: fadeSlideUp 0.4s var(--bp-ease) both;
+}
+
+.bp-anim-pop {
+  animation: bp-pop-in 0.3s var(--bp-ease) both;
+}
+
+.bp-modal-overlay {
+  animation: bp-overlay-in 0.16s ease-out both;
+}
+
+.bp-modal-panel {
+  animation: bp-scale-in 0.22s var(--bp-ease) both;
+}
+
+.bp-row-in {
+  animation: bp-fade-in 0.3s var(--bp-ease) both;
+}
+
+.bp-tap {
+  transition: transform var(--bp-dur-fast) var(--bp-ease);
+}
+.bp-tap:active {
+  transform: scale(0.9);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bp-anim-page,
+  .bp-anim-pop,
+  .bp-modal-overlay,
+  .bp-modal-panel,
+  .bp-row-in {
+    animation: none !important;
+  }
+  .bp-tap {
+    transition: none !important;
+  }
+}
+
 /* Scrub handle for the interactive project timeline (ProjectTimeline.tsx) */
 .bp-scrub {
   outline: none;

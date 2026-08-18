@@ -5,6 +5,7 @@ export type ProjectStatus =
   | "En curso"
   | "En riesgo"
   | "Bloqueado"
+  | "Pausado"
   | "Completado";
 
 export type Priority = "Alta" | "Media" | "Baja";
@@ -527,8 +528,10 @@ export function getReportHistory(project: Project): ReportEntry[] {
   const start = new Date(project.startDate).getTime();
   const end = new Date(project.endDate).getTime();
   const now = Date.now();
-  const rangeEnd = Math.max(start + 1, Math.min(now, end));
-  const span = rangeEnd - start;
+  // If the project hasn't started yet, "now" is before start — spread across
+  // the full start→end span instead of collapsing to a near-zero range.
+  const rangeEnd = now > start ? Math.min(now, end) : end;
+  const span = Math.max(1, rangeEnd - start);
   const points = project.trend;
   const n = points.length;
 
@@ -563,6 +566,7 @@ export const STATUS_OPTIONS: ProjectStatus[] = [
   "En curso",
   "En riesgo",
   "Bloqueado",
+  "Pausado",
   "Completado",
 ];
 
@@ -579,9 +583,70 @@ const STATUS_BADGE_COLOR: Record<ProjectStatus, BadgeColor> = {
   "En curso": "info",
   "En riesgo": "warning",
   Bloqueado: "danger",
+  Pausado: "neutral",
   Completado: "success",
 };
 
 export function getStatusBadgeColor(status: ProjectStatus): BadgeColor {
   return STATUS_BADGE_COLOR[status];
+}
+
+/** Slugifies a project name into a URL-safe id, disambiguating collisions with existingIds. */
+export function generateProjectId(name: string, existingIds: string[]): string {
+  const base =
+    name
+      .trim()
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[̀-ͯ]/g, "")
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "") || "proyecto";
+  let id = base;
+  let n = 2;
+  while (existingIds.includes(id)) {
+    id = `${base}-${n}`;
+    n += 1;
+  }
+  return id;
+}
+
+/** Synthesizes a plausible 8-week trend ramping up to the given current metrics. */
+export function buildTrendFromMetrics(passRate: number, testsExecuted: number): TrendPoint[] {
+  const weeks = 8;
+  return Array.from({ length: weeks }, (_, i) => {
+    const t = (i + 1) / weeks;
+    return {
+      label: `S${i + 1}`,
+      passRate: Math.round(passRate * (0.85 + 0.15 * t)),
+      testsExecuted: Math.round(testsExecuted * t),
+    };
+  });
+}
+
+/** A blank, fully-shaped project draft used to seed the create wizard. */
+export function createEmptyDraft(): Omit<Project, "id"> {
+  const today = new Date().toISOString().slice(0, 10);
+  return {
+    name: "",
+    client: "",
+    category: "Web",
+    status: "Por iniciar",
+    priority: "Media",
+    startDate: today,
+    endDate: today,
+    qaLead: "",
+    team: [],
+    releases: [],
+    lastReportDate: "—",
+    passRate: 0,
+    coverage: 0,
+    testsExecuted: 0,
+    bugsOpen: 0,
+    bugsCritical: 0,
+    bugsBySeverity: { critical: 0, high: 0, medium: 0, low: 0 },
+    description: "",
+    summary: "",
+    trend: buildTrendFromMetrics(0, 0),
+    actionables: [],
+  };
 }
