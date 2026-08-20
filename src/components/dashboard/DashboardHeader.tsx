@@ -7,12 +7,16 @@ import Button from "@/components/ui/Button";
 import { dashboardToMarkdown, downloadTextFile } from "@/lib/dashboardExport";
 import { useDashboardFilters } from "@/lib/dashboardFilters";
 import { useStrategistRecords } from "@/lib/strategistRecords";
-import { QUARTERS, QUARTER_LABELS, QUARTERS_WITH_DATA, type Quarter } from "@/lib/strategists";
-
-const PERIOD_OPTIONS: { value: "anual" | Quarter; label: string }[] = [
-  { value: "anual", label: "Anual" },
-  ...QUARTERS.map((q) => ({ value: q as Quarter, label: QUARTER_LABELS[q] })),
-];
+import {
+  annualPeriod,
+  getDefaultPeriod,
+  getMonthShortLabel,
+  isAnnualPeriod,
+  isFutureMonth,
+  monthKey,
+  periodYear,
+  YEARS,
+} from "@/lib/strategists";
 
 export function DashboardHeader() {
   const {
@@ -42,7 +46,8 @@ export function DashboardHeader() {
     window.print();
   }
 
-  const hasActiveFilters = searchQuery.trim() !== "" || period !== "anual" || !!specificDate;
+  const hasActiveFilters = searchQuery.trim() !== "" || period !== getDefaultPeriod() || !!specificDate;
+  const selectedYear = periodYear(period);
 
   return (
     <header className="no-print sticky top-0 z-40 bg-[var(--bp-surface)] shadow-[var(--bp-shadow-sm)]">
@@ -106,24 +111,48 @@ export function DashboardHeader() {
           placeholder="Buscar estratega por nombre o rol…"
           className="w-full rounded-[var(--bp-radius-sm)] border border-[var(--bp-border)] bg-[var(--bp-surface)] px-3 py-1.5 text-[13px] text-[var(--bp-ink)] outline-none placeholder:text-[var(--bp-ink-soft)] focus:border-[var(--bp-blue)] sm:max-w-xs"
         />
-        <div className="flex items-center gap-1">
-          {PERIOD_OPTIONS.map((o) => {
-            const hasData = o.value === "anual" || QUARTERS_WITH_DATA.includes(o.value);
+        <select
+          value={selectedYear}
+          onChange={(e) => setPeriod(annualPeriod(Number(e.target.value)))}
+          className="rounded-[var(--bp-radius-sm)] border border-[var(--bp-border)] bg-[var(--bp-surface)] px-2 py-1 text-[12px] font-medium text-[var(--bp-ink)] outline-none focus:border-[var(--bp-blue)]"
+        >
+          {YEARS.map((y) => (
+            <option key={y} value={y}>
+              {y}
+            </option>
+          ))}
+        </select>
+        <div className="flex flex-wrap items-center gap-1">
+          <button
+            type="button"
+            onClick={() => setPeriod(annualPeriod(selectedYear))}
+            className={`bp-tap rounded-[var(--bp-radius-pill)] border px-2.5 py-1 text-[11px] font-medium transition-colors duration-[var(--bp-dur)] ${
+              isAnnualPeriod(period)
+                ? "border-[var(--bp-blue)] bg-[var(--bp-blue)]/10 text-[var(--bp-blue-600)]"
+                : "border-[var(--bp-border)] text-[var(--bp-ink-soft)] hover:border-[var(--bp-blue)]"
+            }`}
+          >
+            Anual
+          </button>
+          {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => {
+            const mk = monthKey(selectedYear, m);
+            const future = isFutureMonth(mk);
             return (
               <button
-                key={o.value}
+                key={mk}
                 type="button"
-                onClick={() => setPeriod(o.value)}
-                title={hasData ? undefined : "Aún no hay datos para este trimestre"}
-                className={`bp-tap rounded-[var(--bp-radius-pill)] border px-2.5 py-1 text-[11px] font-medium transition-colors duration-[var(--bp-dur)] ${
-                  period === o.value
+                disabled={future}
+                onClick={() => setPeriod(mk)}
+                title={future ? "Ese mes todavía no ocurre" : undefined}
+                className={`bp-tap rounded-[var(--bp-radius-pill)] border px-2 py-1 text-[11px] font-medium transition-colors duration-[var(--bp-dur)] ${
+                  period === mk
                     ? "border-[var(--bp-blue)] bg-[var(--bp-blue)]/10 text-[var(--bp-blue-600)]"
-                    : hasData
-                      ? "border-[var(--bp-border)] text-[var(--bp-ink-soft)] hover:border-[var(--bp-blue)]"
-                      : "border-dashed border-[var(--bp-border)] text-[var(--bp-ink-soft)]/50"
+                    : future
+                      ? "cursor-not-allowed border-dashed border-[var(--bp-border)] text-[var(--bp-ink-soft)]/50"
+                      : "border-[var(--bp-border)] text-[var(--bp-ink-soft)] hover:border-[var(--bp-blue)]"
                 }`}
               >
-                {o.label}
+                {getMonthShortLabel(mk)}
               </button>
             );
           })}

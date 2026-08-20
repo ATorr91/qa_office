@@ -1,13 +1,13 @@
 "use client";
 
-import { getPeriodLabel, QUARTER_LABELS, type Strategist } from "@/lib/strategists";
+import { getMonthLabel, getPeriodLabel, type Strategist } from "@/lib/strategists";
 import { useDashboardFilters, type Period } from "@/lib/dashboardFilters";
 import { getEffectiveRecord, useStrategistRecords } from "@/lib/strategistRecords";
 
 const NO_DATA = "Sin información disponible";
 
 function periodLabel(period: Period): string {
-  return period === "anual" ? "Anual (todos los trimestres con datos)" : getPeriodLabel(period);
+  return getPeriodLabel(period);
 }
 
 /** Clean, black-on-white report layout shown only when printing (window.print → PDF). */
@@ -41,9 +41,9 @@ export function DashboardPrintableReport({ strategists, period }: { strategists:
       </p>
 
       {strategists.map((s, i) => {
-        const manualByQuarter = recordsByStrategist[s.id] ?? {};
-        const deadlinesByQuarter = jiraDeadlines?.configured && !jiraDeadlines.error ? jiraDeadlines.byEmail[s.email] ?? null : null;
-        const r = getEffectiveRecord(manualByQuarter, deadlinesByQuarter, period);
+        const manualByMonth = recordsByStrategist[s.id] ?? {};
+        const deadlinesByMonth = jiraDeadlines?.configured && !jiraDeadlines.error ? jiraDeadlines.byEmail[s.email] ?? null : null;
+        const r = getEffectiveRecord(manualByMonth, deadlinesByMonth, period);
         const deadlineText =
           r.deadlineComplianceRate !== null
             ? `${r.deadlineComplianceRate}% (${r.deadlinesOnTime}/${r.deadlinesAssigned})`
@@ -88,8 +88,8 @@ export function DashboardPrintableReport({ strategists, period }: { strategists:
               <div style={{ fontSize: 10.5, marginTop: 6 }}>
                 <strong>Autoevaluación guiada:</strong>
                 {r.selfAssessments.map((a) => (
-                  <div key={a.quarter} style={{ marginTop: 2 }}>
-                    {r.selfAssessments.length > 1 && <span style={{ color: "#777" }}>{QUARTER_LABELS[a.quarter]}: </span>}
+                  <div key={a.month} style={{ marginTop: 2 }}>
+                    {r.selfAssessments.length > 1 && <span style={{ color: "#777" }}>{getMonthLabel(a.month)}: </span>}
                     <div>Victoria: {a.biggestWin}</div>
                     <div>Aprendizaje: {a.mistakeLearning}</div>
                     <div>Habilidad a desarrollar: {a.skillToDevelop}</div>

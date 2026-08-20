@@ -3,35 +3,110 @@
 // manual entry via the Admin section (see src/lib/strategistRecords.tsx). A strategist
 // with no data entered yet simply has no data; nothing here invents numbers to fill gaps.
 
-export type Quarter = "Q1" | "Q2" | "Q3" | "Q4";
+/** "YYYY-MM", e.g. "2026-03". */
+export type MonthKey = string;
 
-export const QUARTERS: Quarter[] = ["Q1", "Q2", "Q3", "Q4"];
-
-export const QUARTER_LABELS: Record<Quarter, string> = {
-  Q1: "Q1 2026",
-  Q2: "Q2 2026",
-  Q3: "Q3 2026",
-  Q4: "Q4 2026",
-};
-
-export const QUARTER_RANGES: Record<Quarter, [string, string]> = {
-  Q1: ["2026-01-01", "2026-03-31"],
-  Q2: ["2026-04-01", "2026-06-30"],
-  Q3: ["2026-07-01", "2026-09-30"],
-  Q4: ["2026-10-01", "2026-12-31"],
-};
-
-/** Quarters that have already happened as of the dashboard's "as of" date — Q4 hasn't started yet. */
-export const QUARTERS_WITH_DATA: Quarter[] = ["Q1", "Q2", "Q3"];
+/** A single month ("YYYY-MM") or a whole year's aggregate ("YYYY-anual"). */
+export type Period = string;
 
 export const DASHBOARD_LAST_UPDATED = "2026-08-17";
 
-export function quarterFromDate(dateIso: string): Quarter {
-  const month = new Date(`${dateIso}T00:00:00`).getMonth(); // 0-11
-  if (month <= 2) return "Q1";
-  if (month <= 5) return "Q2";
-  if (month <= 8) return "Q3";
-  return "Q4";
+const [CURRENT_YEAR, CURRENT_MONTH] = DASHBOARD_LAST_UPDATED.split("-").slice(0, 2).map(Number) as [number, number];
+
+export const EARLIEST_YEAR = CURRENT_YEAR - 1;
+
+/** Selectable years in the history/filter UI, oldest first. */
+export const YEARS: number[] = Array.from({ length: CURRENT_YEAR - EARLIEST_YEAR + 1 }, (_, i) => EARLIEST_YEAR + i);
+
+const MONTH_NAMES = [
+  "Enero",
+  "Febrero",
+  "Marzo",
+  "Abril",
+  "Mayo",
+  "Junio",
+  "Julio",
+  "Agosto",
+  "Septiembre",
+  "Octubre",
+  "Noviembre",
+  "Diciembre",
+];
+
+const MONTH_NAMES_SHORT = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
+
+export function monthKey(year: number, month: number): MonthKey {
+  return `${year}-${String(month).padStart(2, "0")}`;
+}
+
+export function parseMonthKey(mk: MonthKey): { year: number; month: number } {
+  const [year, month] = mk.split("-").map(Number);
+  return { year, month };
+}
+
+export function getMonthLabel(mk: MonthKey): string {
+  const { year, month } = parseMonthKey(mk);
+  return `${MONTH_NAMES[month - 1]} ${year}`;
+}
+
+export function getMonthShortLabel(mk: MonthKey): string {
+  const { month } = parseMonthKey(mk);
+  return MONTH_NAMES_SHORT[month - 1];
+}
+
+/** Extracts the "YYYY-MM" month a full ISO date ("YYYY-MM-DD...") falls in. */
+export function monthFromDate(dateIso: string): MonthKey {
+  return dateIso.slice(0, 7);
+}
+
+export function isFutureMonth(mk: MonthKey): boolean {
+  const { year, month } = parseMonthKey(mk);
+  return year > CURRENT_YEAR || (year === CURRENT_YEAR && month > CURRENT_MONTH);
+}
+
+/** All months in a year that have already happened (all 12 for past years, elapsed ones for the current year). */
+export function monthsInYear(year: number): MonthKey[] {
+  const maxMonth = year === CURRENT_YEAR ? CURRENT_MONTH : year > CURRENT_YEAR ? 0 : 12;
+  return Array.from({ length: maxMonth }, (_, i) => monthKey(year, i + 1));
+}
+
+/** Every elapsed month across every selectable year, oldest first — the full history range. */
+export function allMonthsWithData(): MonthKey[] {
+  return YEARS.flatMap((y) => monthsInYear(y));
+}
+
+export function isAnnualPeriod(p: Period): boolean {
+  return p.endsWith("-anual");
+}
+
+export function annualPeriod(year: number): Period {
+  return `${year}-anual`;
+}
+
+export function periodYear(p: Period): number {
+  return Number(p.split("-")[0]);
+}
+
+/** Resolves a period to the concrete list of months it covers. */
+export function monthsForPeriod(p: Period): MonthKey[] {
+  return isAnnualPeriod(p) ? monthsInYear(periodYear(p)) : [p];
+}
+
+export function getPeriodLabel(p: Period): string {
+  return isAnnualPeriod(p) ? `Anual ${periodYear(p)}` : getMonthLabel(p);
+}
+
+export function getDefaultPeriod(): Period {
+  return annualPeriod(CURRENT_YEAR);
+}
+
+/** The month immediately before the given one, or null if it's before tracking started. */
+export function getPreviousMonth(mk: MonthKey): MonthKey | null {
+  const { year, month } = parseMonthKey(mk);
+  const prevYear = month === 1 ? year - 1 : year;
+  const prevMonth = month === 1 ? 12 : month - 1;
+  if (prevYear < EARLIEST_YEAR) return null;
+  return monthKey(prevYear, prevMonth);
 }
 
 export type OkrStatus = "on-track" | "at-risk" | "off-track";
@@ -69,6 +144,17 @@ export interface SelfAssessment {
   skillToDevelop: string;
 }
 
+/** One project a strategist has worked on — not tied to a single month, spans a date range. */
+export interface ProjectAssignment {
+  id: string;
+  projectName: string;
+  client: string;
+  role: string;
+  startDate: string;
+  endDate: string | null;
+  notes: string;
+}
+
 export interface Strategist {
   id: string;
   name: string;
@@ -86,7 +172,7 @@ const PROFILES: { id: string; name: string; role: string; email: string }[] = [
   { id: "carlos-gonzalez", name: "Carlos González", role: "Estratega", email: "carlos.gonzalez@bluepixel.mx" },
   { id: "daniel-gamboa", name: "Daniel Gamboa", role: "Estratega", email: "daniel.gamboa@bluepixel.mx" },
   { id: "johanna-quiroga", name: "Johanna Quiroga", role: "Estratega", email: "johanna.quiroga@bluepixel.mx" },
-  { id: "jorge-carballo", name: "Jorge Carballo", role: "Estratega", email: "jorge@bluepixel.mx" },
+  { id: "jorge-de-buen", name: "Jorge de Buen", role: "Estratega", email: "jorge@bluepixel.mx" },
   { id: "lucero-cervantes", name: "Lucero Cervantes", role: "Estratega", email: "lucero.cervantes@bluepixel.mx" },
   { id: "luis-rodriguez", name: "Luis Rodríguez", role: "Estratega", email: "luis.rodriguez@bluepixel.mx" },
   { id: "camila", name: "Camila", role: "Estratega", email: "camila@bluepixel.mx" },
@@ -97,17 +183,6 @@ export const STRATEGISTS: Strategist[] = PROFILES.map((p, i) => ({
   ...p,
   avatarColor: AVATAR_COLORS[i % AVATAR_COLORS.length],
 }));
-
-export function getPeriodLabel(period: Quarter | "anual"): string {
-  return period === "anual" ? "Anual" : QUARTER_LABELS[period];
-}
-
-/** The quarter with data immediately before the given one, or null if it's the first. */
-export function getPreviousQuarter(quarter: Quarter): Quarter | null {
-  const idx = QUARTERS_WITH_DATA.indexOf(quarter);
-  if (idx <= 0) return null;
-  return QUARTERS_WITH_DATA[idx - 1];
-}
 
 export function daysSince(dateIso: string): number {
   return Math.round((Date.now() - new Date(`${dateIso}T00:00:00`).getTime()) / 86_400_000);

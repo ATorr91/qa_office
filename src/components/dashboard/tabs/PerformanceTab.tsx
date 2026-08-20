@@ -5,8 +5,9 @@ import InsightPanel from "@/components/dashboard/InsightPanel";
 import StatTile from "@/components/dashboard/StatTile";
 import StrategistAvatar from "@/components/dashboard/StrategistAvatar";
 import TrendSparkline from "@/components/dashboard/TrendSparkline";
-import { getEffectiveRecordForQuarter, useEffectiveRecords, useStrategistDataInputs } from "@/lib/strategistRecords";
-import { QUARTERS_WITH_DATA, QUARTER_LABELS } from "@/lib/strategists";
+import { useDashboardFilters } from "@/lib/dashboardFilters";
+import { getEffectiveRecordForMonth, useEffectiveRecords, useStrategistDataInputs } from "@/lib/strategistRecords";
+import { getMonthShortLabel, monthsInYear, periodYear } from "@/lib/strategists";
 
 const AT_RISK_THRESHOLD = 70;
 const NO_DATA_LABEL = "Sin información disponible";
@@ -19,6 +20,7 @@ function toneFor(score: number): "good" | "warning" | "danger" {
 
 export function PerformanceTab() {
   const rows = useEffectiveRecords();
+  const { period } = useDashboardFilters();
   const { filteredStrategists, recordsByStrategist, jiraDeadlines } = useStrategistDataInputs();
 
   const withData = rows.filter((x) => x.r.performanceScore !== null).sort((a, b) => b.r.performanceScore! - a.r.performanceScore!);
@@ -28,11 +30,11 @@ export function PerformanceTab() {
   const top = withData[0];
   const atRisk = withData.filter((x) => x.r.performanceScore! < AT_RISK_THRESHOLD);
 
-  const teamTrend = QUARTERS_WITH_DATA.map((q) => {
+  const teamTrend = monthsInYear(periodYear(period)).map((m) => {
     const scores = filteredStrategists
-      .map((s) => getEffectiveRecordForQuarter(s, q, recordsByStrategist, jiraDeadlines).performanceScore)
+      .map((s) => getEffectiveRecordForMonth(s, m, recordsByStrategist, jiraDeadlines).performanceScore)
       .filter((v): v is number => v !== null);
-    return scores.length > 0 ? { label: QUARTER_LABELS[q].split(" ")[0], value: Math.round(scores.reduce((a, b) => a + b, 0) / scores.length) } : null;
+    return scores.length > 0 ? { label: getMonthShortLabel(m), value: Math.round(scores.reduce((a, b) => a + b, 0) / scores.length) } : null;
   }).filter((v): v is NonNullable<typeof v> => v !== null);
 
   return (
@@ -61,7 +63,7 @@ export function PerformanceTab() {
       <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
         <div className="rounded-[var(--bp-radius-lg)] border border-[var(--bp-border)] bg-[var(--bp-surface)] p-4">
           <h3 className="text-[13px] font-semibold text-[var(--bp-ink)]">Tendencia de desempeño del equipo</h3>
-          <p className="mt-0.5 text-[11px] text-[var(--bp-ink-soft)]">Promedio del equipo por trimestre, independiente del filtro de periodo.</p>
+          <p className="mt-0.5 text-[11px] text-[var(--bp-ink-soft)]">Promedio del equipo por mes, para el año seleccionado.</p>
           <div className="mt-3">
             <TrendSparkline points={teamTrend} />
           </div>
@@ -119,7 +121,7 @@ export function PerformanceTab() {
       <InsightPanel
         alerts={atRisk.map((x) => ({ text: `${x.s.name} (${x.s.role}) tiene un score de ${x.r.performanceScore}% — por debajo del umbral de ${AT_RISK_THRESHOLD}%.` }))}
         tips={[
-          "Programa una conversación 1:1 con los estrategas en zona de riesgo antes de cierre de trimestre.",
+          "Programa una conversación 1:1 con los estrategas en zona de riesgo antes de cierre de mes.",
           "Reconoce públicamente al mejor desempeño para reforzar buenas prácticas replicables.",
           ...(withoutData.length > 0
             ? [`${withoutData.length} estratega${withoutData.length === 1 ? "" : "s"} aún no tiene${withoutData.length === 1 ? "" : "n"} información cargada en Admin para este periodo.`]

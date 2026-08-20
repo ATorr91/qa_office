@@ -4,6 +4,7 @@ import { useState } from "react";
 import DashboardPrintableReport from "@/components/dashboard/DashboardPrintableReport";
 import BitacorasTab from "@/components/dashboard/tabs/BitacorasTab";
 import DeadlinesTab from "@/components/dashboard/tabs/DeadlinesTab";
+import HistoryTab from "@/components/dashboard/tabs/HistoryTab";
 import NpsTab from "@/components/dashboard/tabs/NpsTab";
 import OkrKpiTab from "@/components/dashboard/tabs/OkrKpiTab";
 import PeerReviewsTab from "@/components/dashboard/tabs/PeerReviewsTab";
@@ -16,12 +17,13 @@ import { getPeriodLabel } from "@/lib/strategists";
 const TABS = [
   { value: "desempeno", label: "Evaluación de desempeño" },
   { value: "peer", label: "Peer reviews" },
-  { value: "okr", label: "Cumplimiento de OKRs y KPIs" },
-  { value: "deadlines", label: "Cumplimiento de deadlines" },
-  { value: "bitacoras", label: "Cumplimiento de bitácoras" },
+  { value: "okr", label: "OKRs y KPIs" },
+  { value: "deadlines", label: "Deadlines" },
+  { value: "bitacoras", label: "Bitácoras" },
   { value: "qa", label: "Calificación QA" },
-  { value: "nps", label: "NPS / Feedback del cliente" },
-  { value: "autoevaluacion", label: "Autoevaluación guiada" },
+  { value: "nps", label: "NPS / Cliente" },
+  { value: "autoevaluacion", label: "Autoevaluación" },
+  { value: "historial", label: "Historial" },
 ] as const;
 
 type Tab = (typeof TABS)[number]["value"];
@@ -44,13 +46,13 @@ export default function DashboardEstrategasPage() {
           </p>
         </div>
 
-        <div className="mt-5 flex flex-wrap gap-1 border-b border-[var(--bp-border)]">
+        <div className="mt-5 flex flex-nowrap gap-0.5 overflow-x-auto border-b border-[var(--bp-border)]">
           {TABS.map((t) => (
             <button
               key={t.value}
               type="button"
               onClick={() => setTab(t.value)}
-              className={`bp-tap relative px-3 pb-2.5 text-[13px] font-semibold transition-colors duration-[var(--bp-dur)] ${
+              className={`bp-tap relative shrink-0 whitespace-nowrap px-2 pb-2 text-[11px] font-semibold transition-colors duration-[var(--bp-dur)] ${
                 tab === t.value ? "text-[var(--bp-blue)]" : "text-[var(--bp-ink-soft)] hover:text-[var(--bp-ink)]"
               }`}
             >
@@ -83,6 +85,9 @@ export default function DashboardEstrategasPage() {
         </div>
         <div className={`mt-5 ${tab === "autoevaluacion" ? "" : "hidden"}`}>
           <SelfAssessmentTab />
+        </div>
+        <div className={`mt-5 ${tab === "historial" ? "" : "hidden"}`}>
+          <HistoryTab />
         </div>
       </div>
 

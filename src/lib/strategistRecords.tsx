@@ -2,12 +2,23 @@
 
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import { useDashboardFilters, type DeadlinesByEmail } from "@/lib/dashboardFilters";
-import { pct, QUARTERS_WITH_DATA, type Okr, type PeerComment, type Quarter, type Strategist } from "@/lib/strategists";
+import {
+  monthsForPeriod,
+  pct,
+  type MonthKey,
+  type Okr,
+  type PeerComment,
+  type Period,
+  type ProjectAssignment,
+  type Strategist,
+} from "@/lib/strategists";
 
-const STORAGE_KEY = "qa-office:dashboard-estrategas-records";
+const RECORDS_STORAGE_KEY = "qa-office:dashboard-estrategas-records-v2";
+const PROJECTS_STORAGE_KEY = "qa-office:dashboard-estrategas-projects";
+const JIRA_BOARDS_STORAGE_KEY = "qa-office:dashboard-estrategas-jira-boards";
 
-/** One strategist's manually-entered data for one quarter. Every field starts unset — nothing here is fabricated. */
-export interface ManualQuarterlyData {
+/** One strategist's manually-entered data for one month. Every field starts unset — nothing here is fabricated. */
+export interface ManualMonthlyData {
   peerReviewScore: number | null;
   peerReviewCount: number | null;
   peerComments: PeerComment[];
@@ -28,7 +39,7 @@ export interface ManualQuarterlyData {
   selfAssessmentSkillToDevelop: string;
 }
 
-export const EMPTY_QUARTERLY_DATA: ManualQuarterlyData = {
+export const EMPTY_MONTHLY_DATA: ManualMonthlyData = {
   peerReviewScore: null,
   peerReviewCount: null,
   peerComments: [],
@@ -49,50 +60,78 @@ export const EMPTY_QUARTERLY_DATA: ManualQuarterlyData = {
   selfAssessmentSkillToDevelop: "",
 };
 
-type RecordsState = Record<string, Partial<Record<Quarter, ManualQuarterlyData>>>;
+type RecordsState = Record<string, Partial<Record<MonthKey, ManualMonthlyData>>>;
+type ProjectsState = Record<string, ProjectAssignment[]>;
+type JiraBoardsState = Record<string, string>;
 
 interface StrategistRecordsContextValue {
   hydrated: boolean;
-  getQuarterData: (strategistId: string, quarter: Quarter) => ManualQuarterlyData;
-  setQuarterData: (strategistId: string, quarter: Quarter, data: ManualQuarterlyData) => void;
   recordsByStrategist: RecordsState;
+  getMonthData: (strategistId: string, month: MonthKey) => ManualMonthlyData;
+  setMonthData: (strategistId: string, month: MonthKey, data: ManualMonthlyData) => void;
+  projectsByStrategist: ProjectsState;
+  getProjectHistory: (strategistId: string) => ProjectAssignment[];
+  setProjectHistory: (strategistId: string, projects: ProjectAssignment[]) => void;
+  jiraBoards: JiraBoardsState;
+  getJiraBoard: (strategistId: string) => string;
+  setJiraBoard: (strategistId: string, projectKey: string) => void;
 }
 
 const StrategistRecordsContext = createContext<StrategistRecordsContextValue | null>(null);
 
-export function StrategistRecordsProvider({ children }: { children: ReactNode }) {
-  const [records, setRecords] = useState<RecordsState>({});
+function useLocalStorageState<T>(key: string, initial: T): [T, (updater: T | ((prev: T) => T)) => void, boolean] {
+  const [state, setState] = useState<T>(initial);
   const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
     try {
-      const raw = window.localStorage.getItem(STORAGE_KEY);
-      if (raw) setRecords(JSON.parse(raw) as RecordsState);
+      const raw = window.localStorage.getItem(key);
+      if (raw) setState(JSON.parse(raw) as T);
     } catch {
-      // Corrupt or inaccessible storage — start from empty (no fabricated fallback data).
+      // Corrupt or inaccessible storage — start from the initial value (no fabricated fallback data).
     }
     setHydrated(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
     if (!hydrated) return;
     try {
-      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
+      window.localStorage.setItem(key, JSON.stringify(state));
     } catch {
       // Storage full or unavailable (private browsing) — edits stay in-memory for this session.
     }
-  }, [records, hydrated]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state, hydrated]);
+
+  return [state, setState, hydrated];
+}
+
+export function StrategistRecordsProvider({ children }: { children: ReactNode }) {
+  const [records, setRecords, recordsHydrated] = useLocalStorageState<RecordsState>(RECORDS_STORAGE_KEY, {});
+  const [projects, setProjects, projectsHydrated] = useLocalStorageState<ProjectsState>(PROJECTS_STORAGE_KEY, {});
+  const [jiraBoards, setJiraBoards, boardsHydrated] = useLocalStorageState<JiraBoardsState>(JIRA_BOARDS_STORAGE_KEY, {});
 
   const value = useMemo<StrategistRecordsContextValue>(
     () => ({
-      hydrated,
+      hydrated: recordsHydrated && projectsHydrated && boardsHydrated,
       recordsByStrategist: records,
-      getQuarterData: (strategistId, quarter) => records[strategistId]?.[quarter] ?? EMPTY_QUARTERLY_DATA,
-      setQuarterData: (strategistId, quarter, data) => {
-        setRecords((prev) => ({ ...prev, [strategistId]: { ...prev[strategistId], [quarter]: data } }));
+      getMonthData: (strategistId, month) => records[strategistId]?.[month] ?? EMPTY_MONTHLY_DATA,
+      setMonthData: (strategistId, month, data) => {
+        setRecords((prev) => ({ ...prev, [strategistId]: { ...prev[strategistId], [month]: data } }));
+      },
+      projectsByStrategist: projects,
+      getProjectHistory: (strategistId) => projects[strategistId] ?? [],
+      setProjectHistory: (strategistId, list) => {
+        setProjects((prev) => ({ ...prev, [strategistId]: list }));
+      },
+      jiraBoards,
+      getJiraBoard: (strategistId) => jiraBoards[strategistId] ?? "",
+      setJiraBoard: (strategistId, projectKey) => {
+        setJiraBoards((prev) => ({ ...prev, [strategistId]: projectKey }));
       },
     }),
-    [records, hydrated],
+    [records, recordsHydrated, projects, projectsHydrated, jiraBoards, boardsHydrated, setRecords, setProjects, setJiraBoards],
   );
 
   return <StrategistRecordsContext.Provider value={value}>{children}</StrategistRecordsContext.Provider>;
@@ -129,7 +168,7 @@ export interface EffectiveRecord {
   npsPromoters: number | null;
   npsPassives: number | null;
   npsDetractors: number | null;
-  selfAssessments: { quarter: Quarter; biggestWin: string; mistakeLearning: string; skillToDevelop: string }[];
+  selfAssessments: { month: MonthKey; biggestWin: string; mistakeLearning: string; skillToDevelop: string }[];
   hasAnyData: boolean;
 }
 
@@ -145,23 +184,23 @@ function sumOrNull(values: (number | null | undefined)[]): number | null {
   return present.reduce((a, b) => a + b, 0);
 }
 
-export interface DeadlineQuarterCount {
+export interface MonthDeadlineCount {
   assigned: number;
   onTime: number;
 }
 
 /**
- * Builds the comparable "effective" view of one strategist's data for a quarter or the annual
- * period. `deadlinesByQuarter` is null when Jira isn't configured/reachable (unknown, not zero);
- * an entry present but assigned=0 means Jira confirmed there were no due tickets that quarter.
+ * Builds the comparable "effective" view of one strategist's data for a month or the annual
+ * period. `deadlinesByMonth` is null when Jira isn't configured/reachable for this strategist
+ * (unknown, not zero); a month present but assigned=0 means Jira confirmed no due tickets then.
  */
 export function getEffectiveRecord(
-  manualByQuarter: Partial<Record<Quarter, ManualQuarterlyData>>,
-  deadlinesByQuarter: Partial<Record<Quarter, DeadlineQuarterCount>> | null,
-  period: Quarter | "anual",
+  manualByMonth: Partial<Record<MonthKey, ManualMonthlyData>>,
+  deadlinesByMonth: Partial<Record<MonthKey, MonthDeadlineCount>> | null,
+  period: Period,
 ): EffectiveRecord {
-  const quarters: Quarter[] = period === "anual" ? QUARTERS_WITH_DATA : [period];
-  const manuals = quarters.map((q) => manualByQuarter[q] ?? EMPTY_QUARTERLY_DATA);
+  const months = monthsForPeriod(period);
+  const manuals = months.map((m) => manualByMonth[m] ?? EMPTY_MONTHLY_DATA);
 
   const peerReviewScore = avgOrNull(manuals.map((m) => m.peerReviewScore));
   const peerReviewCount = sumOrNull(manuals.map((m) => m.peerReviewCount));
@@ -191,9 +230,9 @@ export function getEffectiveRecord(
   let deadlinesAssigned = 0;
   let deadlinesOnTime = 0;
   let deadlineComplianceRate: number | null = null;
-  if (deadlinesByQuarter) {
-    for (const q of quarters) {
-      const d = deadlinesByQuarter[q];
+  if (deadlinesByMonth) {
+    for (const m of months) {
+      const d = deadlinesByMonth[m];
       if (d) {
         deadlinesAssigned += d.assigned;
         deadlinesOnTime += d.onTime;
@@ -202,16 +241,16 @@ export function getEffectiveRecord(
     deadlineComplianceRate = deadlinesAssigned > 0 ? pct(deadlinesOnTime, deadlinesAssigned) : null;
   }
 
-  const selfAssessments = quarters
-    .map((q) => {
-      const m = manualByQuarter[q] ?? EMPTY_QUARTERLY_DATA;
-      const hasAny = m.selfAssessmentBiggestWin || m.selfAssessmentMistakeLearning || m.selfAssessmentSkillToDevelop;
+  const selfAssessments = months
+    .map((m) => {
+      const data = manualByMonth[m] ?? EMPTY_MONTHLY_DATA;
+      const hasAny = data.selfAssessmentBiggestWin || data.selfAssessmentMistakeLearning || data.selfAssessmentSkillToDevelop;
       return hasAny
         ? {
-            quarter: q,
-            biggestWin: m.selfAssessmentBiggestWin,
-            mistakeLearning: m.selfAssessmentMistakeLearning,
-            skillToDevelop: m.selfAssessmentSkillToDevelop,
+            month: m,
+            biggestWin: data.selfAssessmentBiggestWin,
+            mistakeLearning: data.selfAssessmentMistakeLearning,
+            skillToDevelop: data.selfAssessmentSkillToDevelop,
           }
         : null;
     })
@@ -261,35 +300,38 @@ export function getEffectiveRecord(
   };
 }
 
+function deadlinesForEmail(
+  jiraDeadlines: { configured: boolean; error: string | null; byEmail: DeadlinesByEmail } | null,
+  email: string,
+): Partial<Record<MonthKey, MonthDeadlineCount>> | null {
+  return jiraDeadlines?.configured && !jiraDeadlines.error ? jiraDeadlines.byEmail[email] ?? {} : null;
+}
+
 /** Combines manual admin-entered data with real Jira deadlines for every currently-filtered strategist. */
 export function useEffectiveRecords(): { s: Strategist; r: EffectiveRecord }[] {
   const { filteredStrategists, period, jiraDeadlines } = useDashboardFilters();
   const { recordsByStrategist } = useStrategistRecords();
 
   return filteredStrategists.map((s) => {
-    const manualByQuarter = recordsByStrategist[s.id] ?? {};
-    const deadlinesByQuarter =
-      jiraDeadlines?.configured && !jiraDeadlines.error ? jiraDeadlines.byEmail[s.email] ?? null : null;
-    return { s, r: getEffectiveRecord(manualByQuarter, deadlinesByQuarter, period) };
+    const manualByMonth = recordsByStrategist[s.id] ?? {};
+    return { s, r: getEffectiveRecord(manualByMonth, deadlinesForEmail(jiraDeadlines, s.email), period) };
   });
 }
 
-/** Raw inputs for tabs that need to compute a per-quarter trend (one point per quarter, not just the selected period). */
+/** Raw inputs for tabs that need to compute a per-month trend (one point per month, not just the selected period). */
 export function useStrategistDataInputs() {
   const { filteredStrategists, jiraDeadlines } = useDashboardFilters();
   const { recordsByStrategist } = useStrategistRecords();
   return { filteredStrategists, recordsByStrategist, jiraDeadlines };
 }
 
-/** Effective record for one strategist in one specific quarter (for trend charts, bypassing the selected period). */
-export function getEffectiveRecordForQuarter(
+/** Effective record for one strategist in one specific month (for trend charts and history, bypassing the selected period). */
+export function getEffectiveRecordForMonth(
   strategist: Strategist,
-  quarter: Quarter,
+  month: MonthKey,
   recordsByStrategist: RecordsState,
   jiraDeadlines: { configured: boolean; error: string | null; byEmail: DeadlinesByEmail } | null,
 ): EffectiveRecord {
-  const manualByQuarter = recordsByStrategist[strategist.id] ?? {};
-  const deadlinesByQuarter =
-    jiraDeadlines?.configured && !jiraDeadlines.error ? jiraDeadlines.byEmail[strategist.email] ?? null : null;
-  return getEffectiveRecord(manualByQuarter, deadlinesByQuarter, quarter);
+  const manualByMonth = recordsByStrategist[strategist.id] ?? {};
+  return getEffectiveRecord(manualByMonth, deadlinesForEmail(jiraDeadlines, strategist.email), month);
 }

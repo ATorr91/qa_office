@@ -126,7 +126,7 @@ export function OkrKpiTab() {
         tips={[
           "Revisa en el check-in semanal los OKRs en riesgo antes de que pasen a fuera de curso.",
           "Un KPI incumplido de forma recurrente suele señalar un problema de capacidad, no de esfuerzo.",
-          "Vincula cada Key Result a una fecha de checkpoint intermedio, no solo a la fecha final del trimestre.",
+          "Vincula cada Key Result a una fecha de checkpoint intermedio, no solo a la fecha final del periodo.",
         ]}
       />
     </div>

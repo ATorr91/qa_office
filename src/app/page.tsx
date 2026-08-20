@@ -53,6 +53,23 @@ const DESTINATIONS = [
       />
     ),
   },
+  {
+    href: "/mapa-valor-estrategas",
+    title: "Mapa de Valor de Estrategas",
+    description:
+      "Próximamente: visualiza en qué proyectos y cuentas está generando valor cada estratega, y dónde hay oportunidades de crecimiento.",
+    accent: "var(--bp-purple)",
+    icon: (
+      <path
+        d="M12 3v3M12 18v3M3 12h3M18 12h3M6.34 6.34l2.12 2.12M15.54 15.54l2.12 2.12M6.34 17.66l2.12-2.12M15.54 8.46l2.12-2.12M12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6Z"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    ),
+  },
 ];
 
 export default function HomePage() {

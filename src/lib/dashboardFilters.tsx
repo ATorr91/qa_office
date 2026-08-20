@@ -1,22 +1,25 @@
 "use client";
 
-import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import {
   DASHBOARD_LAST_UPDATED,
-  quarterFromDate,
+  getDefaultPeriod,
+  monthFromDate,
   STRATEGISTS,
-  type Quarter,
+  type MonthKey,
+  type Period,
   type Strategist,
 } from "./strategists";
+import { useStrategistRecords } from "./strategistRecords";
 
-export type Period = Quarter | "anual";
+export type { Period };
 
-export interface QuarterDeadlineCount {
+export interface MonthDeadlineCount {
   assigned: number;
   onTime: number;
 }
 
-export type DeadlinesByEmail = Record<string, Record<Quarter, QuarterDeadlineCount>>;
+export type DeadlinesByEmail = Record<string, Record<MonthKey, MonthDeadlineCount>>;
 
 export interface JiraDeadlinesResponse {
   configured: boolean;
@@ -24,6 +27,7 @@ export interface JiraDeadlinesResponse {
   fetchedAt: string;
   boardUrl: string | null;
   byEmail: DeadlinesByEmail;
+  unconfiguredEmails: string[];
 }
 
 interface DashboardFiltersValue {
@@ -46,15 +50,25 @@ const DashboardFiltersContext = createContext<DashboardFiltersValue | null>(null
 
 export function DashboardFiltersProvider({ children }: { children: ReactNode }) {
   const [searchQuery, setSearchQuery] = useState("");
-  const [period, setPeriodState] = useState<Period>("anual");
+  const [period, setPeriodState] = useState<Period>(getDefaultPeriod());
   const [specificDate, setSpecificDateState] = useState<string | null>(null);
   const [jiraDeadlines, setJiraDeadlines] = useState<JiraDeadlinesResponse | null>(null);
   const [refreshToken, setRefreshToken] = useState(0);
+  const { jiraBoards, hydrated: recordsHydrated } = useStrategistRecords();
+  const boardsKey = useMemo(() => JSON.stringify(jiraBoards), [jiraBoards]);
+  const lastFetchedBoardsKey = useRef<string | null>(null);
 
   useEffect(() => {
+    if (!recordsHydrated) return;
+    if (lastFetchedBoardsKey.current === boardsKey && refreshToken === 0) return;
+    lastFetchedBoardsKey.current = boardsKey;
+
     let cancelled = false;
-    setJiraDeadlines((prev) => (refreshToken === 0 ? prev : null));
-    fetch("/api/jira/deadlines")
+    fetch("/api/jira/deadlines", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ boards: jiraBoards }),
+    })
       .then((res) => res.json())
       .then((json: JiraDeadlinesResponse) => {
         if (!cancelled) setJiraDeadlines(json);
@@ -67,6 +81,7 @@ export function DashboardFiltersProvider({ children }: { children: ReactNode }) 
             fetchedAt: new Date(0).toISOString(),
             boardUrl: null,
             byEmail: {},
+            unconfiguredEmails: [],
           });
         }
       });
@@ -74,7 +89,7 @@ export function DashboardFiltersProvider({ children }: { children: ReactNode }) 
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [refreshToken]);
+  }, [recordsHydrated, boardsKey, refreshToken]);
 
   function refreshJiraDeadlines() {
     setRefreshToken((n) => n + 1);
@@ -87,12 +102,12 @@ export function DashboardFiltersProvider({ children }: { children: ReactNode }) 
 
   function setSpecificDate(d: string | null) {
     setSpecificDateState(d);
-    if (d) setPeriodState(quarterFromDate(d));
+    if (d) setPeriodState(monthFromDate(d));
   }
 
   function clearFilters() {
     setSearchQuery("");
-    setPeriodState("anual");
+    setPeriodState(getDefaultPeriod());
     setSpecificDateState(null);
   }
 

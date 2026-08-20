@@ -4,23 +4,23 @@ import BarList from "@/components/dashboard/BarList";
 import StrategistAvatar from "@/components/dashboard/StrategistAvatar";
 import { useDashboardFilters } from "@/lib/dashboardFilters";
 import { useEffectiveRecords } from "@/lib/strategistRecords";
-import { getPeriodLabel, QUARTER_LABELS } from "@/lib/strategists";
+import { getMonthLabel, getPeriodLabel } from "@/lib/strategists";
 
 const NO_DATA_LABEL = "Sin información disponible";
 
 function SelfAssessmentBlock({
-  quarterLabel,
+  monthLabel,
   assessment,
   showLabel,
 }: {
-  quarterLabel: string;
+  monthLabel: string;
   assessment: { biggestWin: string; mistakeLearning: string; skillToDevelop: string };
   showLabel: boolean;
 }) {
   return (
     <div className="border-t border-[var(--bp-border)] pt-3 first:border-0 first:pt-0">
       {showLabel && (
-        <div className="mb-1.5 text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--bp-ink-soft)]">{quarterLabel}</div>
+        <div className="mb-1.5 text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--bp-ink-soft)]">{monthLabel}</div>
       )}
       <dl className="flex flex-col gap-2 text-[12px] leading-relaxed">
         <div>
@@ -101,8 +101,8 @@ export function SelfAssessmentTab() {
               <div className="flex flex-col gap-3">
                 {r.selfAssessments.map((a) => (
                   <SelfAssessmentBlock
-                    key={a.quarter}
-                    quarterLabel={QUARTER_LABELS[a.quarter]}
+                    key={a.month}
+                    monthLabel={getMonthLabel(a.month)}
                     assessment={a}
                     showLabel={r.selfAssessments.length > 1}
                   />

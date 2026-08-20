@@ -1,9 +1,9 @@
-import { getEffectiveRecord, type ManualQuarterlyData } from "./strategistRecords";
-import { getPeriodLabel, QUARTER_LABELS, type Quarter, type Strategist } from "./strategists";
+import { getEffectiveRecord, type ManualMonthlyData } from "./strategistRecords";
+import { getMonthLabel, getPeriodLabel, type MonthKey, type Strategist } from "./strategists";
 import type { DeadlinesByEmail, Period } from "./dashboardFilters";
 
 function periodLabel(period: Period): string {
-  return period === "anual" ? "Anual (todos los trimestres con datos)" : getPeriodLabel(period);
+  return getPeriodLabel(period);
 }
 
 const NO_DATA = "Sin información disponible";
@@ -11,7 +11,7 @@ const NO_DATA = "Sin información disponible";
 export function dashboardToMarkdown(
   strategists: Strategist[],
   period: Period,
-  recordsByStrategist: Record<string, Partial<Record<Quarter, ManualQuarterlyData>>>,
+  recordsByStrategist: Record<string, Partial<Record<MonthKey, ManualMonthlyData>>>,
   jiraDeadlines: { configured: boolean; error: string | null; byEmail: DeadlinesByEmail } | null,
 ): string {
   const lines: string[] = [];
@@ -23,9 +23,9 @@ export function dashboardToMarkdown(
   lines.push("");
 
   for (const s of strategists) {
-    const manualByQuarter = recordsByStrategist[s.id] ?? {};
-    const deadlinesByQuarter = jiraDeadlines?.configured && !jiraDeadlines.error ? jiraDeadlines.byEmail[s.email] ?? null : null;
-    const r = getEffectiveRecord(manualByQuarter, deadlinesByQuarter, period);
+    const manualByMonth = recordsByStrategist[s.id] ?? {};
+    const deadlinesByMonth = jiraDeadlines?.configured && !jiraDeadlines.error ? jiraDeadlines.byEmail[s.email] ?? null : null;
+    const r = getEffectiveRecord(manualByMonth, deadlinesByMonth, period);
 
     lines.push(`## ${s.name} — ${s.role}`);
     lines.push("");
@@ -54,7 +54,7 @@ export function dashboardToMarkdown(
     if (r.selfAssessments.length > 0) {
       lines.push("**Autoevaluación guiada:**");
       for (const a of r.selfAssessments) {
-        const prefix = r.selfAssessments.length > 1 ? `_${QUARTER_LABELS[a.quarter]}_ — ` : "";
+        const prefix = r.selfAssessments.length > 1 ? `_${getMonthLabel(a.month)}_ — ` : "";
         lines.push(`- ${prefix}**Mayor victoria:** ${a.biggestWin}`);
         lines.push(`- ${prefix}**Peor error / aprendizaje:** ${a.mistakeLearning}`);
         lines.push(`- ${prefix}**Habilidad a desarrollar:** ${a.skillToDevelop}`);

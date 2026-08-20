@@ -7,8 +7,9 @@ import Skeleton from "@/components/ui/Skeleton";
 import StatTile from "@/components/dashboard/StatTile";
 import StrategistAvatar from "@/components/dashboard/StrategistAvatar";
 import TrendSparkline from "@/components/dashboard/TrendSparkline";
-import { useDashboardFilters, type DeadlinesByEmail as ByEmail, type QuarterDeadlineCount } from "@/lib/dashboardFilters";
-import { QUARTERS_WITH_DATA, QUARTER_LABELS, type Quarter } from "@/lib/strategists";
+import { useDashboardFilters, type DeadlinesByEmail as ByEmail, type MonthDeadlineCount } from "@/lib/dashboardFilters";
+import { useStrategistRecords } from "@/lib/strategistRecords";
+import { getMonthShortLabel, getPreviousMonth, monthsForPeriod, periodYear, monthsInYear, type MonthKey } from "@/lib/strategists";
 
 const AT_RISK_THRESHOLD = 70;
 
@@ -22,17 +23,18 @@ function rate(onTime: number, assigned: number): number {
   return assigned > 0 ? Math.round((onTime / assigned) * 100) : 0;
 }
 
-function sumQuarters(byEmail: ByEmail, email: string, quarters: Quarter[]): QuarterDeadlineCount {
+function sumMonths(byEmail: ByEmail, email: string, months: MonthKey[]): MonthDeadlineCount {
   const rec = byEmail[email];
   if (!rec) return { assigned: 0, onTime: 0 };
-  return quarters.reduce(
-    (acc, q) => ({ assigned: acc.assigned + rec[q].assigned, onTime: acc.onTime + rec[q].onTime }),
+  return months.reduce(
+    (acc, m) => ({ assigned: acc.assigned + (rec[m]?.assigned ?? 0), onTime: acc.onTime + (rec[m]?.onTime ?? 0) }),
     { assigned: 0, onTime: 0 },
   );
 }
 
 export function DeadlinesTab() {
   const { filteredStrategists, period, jiraDeadlines: data } = useDashboardFilters();
+  const { jiraBoards } = useStrategistRecords();
 
   if (!data) {
     return (
@@ -53,11 +55,10 @@ export function DeadlinesTab() {
         <h3 className="text-[13px] font-semibold text-[var(--bp-ink)]">Jira no está configurado</h3>
         <p className="mx-auto mt-1 max-w-md text-[12px] leading-relaxed text-[var(--bp-ink-soft)]">
           Agrega <code className="rounded bg-[var(--bp-surface-alt)] px-1 py-0.5">JIRA_BASE_URL</code>,{" "}
-          <code className="rounded bg-[var(--bp-surface-alt)] px-1 py-0.5">JIRA_EMAIL</code>,{" "}
-          <code className="rounded bg-[var(--bp-surface-alt)] px-1 py-0.5">JIRA_API_TOKEN</code> y{" "}
-          <code className="rounded bg-[var(--bp-surface-alt)] px-1 py-0.5">JIRA_PROJECT_KEY</code> en un archivo{" "}
-          <code className="rounded bg-[var(--bp-surface-alt)] px-1 py-0.5">.env.local</code> en la raíz del proyecto y reinicia el
-          servidor para conectar datos reales de deadlines.
+          <code className="rounded bg-[var(--bp-surface-alt)] px-1 py-0.5">JIRA_EMAIL</code> y{" "}
+          <code className="rounded bg-[var(--bp-surface-alt)] px-1 py-0.5">JIRA_API_TOKEN</code> en un archivo{" "}
+          <code className="rounded bg-[var(--bp-surface-alt)] px-1 py-0.5">.env.local</code> en la raíz del proyecto, reinicia el
+          servidor, y conecta el tablero de cada estratega desde Admin.
         </p>
       </div>
     );
@@ -72,12 +73,13 @@ export function DeadlinesTab() {
     );
   }
 
-  const quartersForPeriod: Quarter[] = period === "anual" ? QUARTERS_WITH_DATA : [period];
+  const monthsForCurrentPeriod = monthsForPeriod(period);
 
   const rows = filteredStrategists
     .map((s) => {
-      const c = sumQuarters(data.byEmail, s.email, quartersForPeriod);
-      return { s, assigned: c.assigned, onTime: c.onTime, complianceRate: rate(c.onTime, c.assigned) };
+      const c = sumMonths(data.byEmail, s.email, monthsForCurrentPeriod);
+      const boardConfigured = !data.unconfiguredEmails?.includes(s.email);
+      return { s, assigned: c.assigned, onTime: c.onTime, complianceRate: rate(c.onTime, c.assigned), boardConfigured };
     })
     .sort((a, b) => b.complianceRate - a.complianceRate);
 
@@ -85,24 +87,27 @@ export function DeadlinesTab() {
   const totalOnTime = rows.reduce((acc, x) => acc + x.onTime, 0);
   const teamRate = rate(totalOnTime, totalAssigned);
   const atRisk = rows.filter((x) => x.assigned > 0 && x.complianceRate < AT_RISK_THRESHOLD);
+  const withoutBoard = rows.filter((x) => !x.boardConfigured);
 
-  const teamTrend = QUARTERS_WITH_DATA.map((q) => {
+  const trendMonths = monthsInYear(periodYear(period));
+  const teamTrend = trendMonths.map((m) => {
     let assigned = 0;
     let onTime = 0;
     for (const s of filteredStrategists) {
-      const c = sumQuarters(data.byEmail, s.email, [q]);
+      const c = sumMonths(data.byEmail, s.email, [m]);
       assigned += c.assigned;
       onTime += c.onTime;
     }
-    return { label: QUARTER_LABELS[q].split(" ")[0], value: rate(onTime, assigned) };
+    return { label: getMonthShortLabel(m), value: rate(onTime, assigned) };
   });
 
   const deltaComments = filteredStrategists
     .map((s) => {
-      const qs = QUARTERS_WITH_DATA;
-      if (qs.length < 2) return null;
-      const prev = sumQuarters(data.byEmail, s.email, [qs[qs.length - 2]]);
-      const curr = sumQuarters(data.byEmail, s.email, [qs[qs.length - 1]]);
+      const currMonth = monthsForCurrentPeriod[monthsForCurrentPeriod.length - 1];
+      const prevMonth = getPreviousMonth(currMonth);
+      if (!prevMonth) return null;
+      const prev = sumMonths(data.byEmail, s.email, [prevMonth]);
+      const curr = sumMonths(data.byEmail, s.email, [currMonth]);
       if (prev.assigned === 0 || curr.assigned === 0) return null;
       const prevRate = rate(prev.onTime, prev.assigned);
       const currRate = rate(curr.onTime, curr.assigned);
@@ -112,8 +117,8 @@ export function DeadlinesTab() {
         author: s.name,
         text:
           delta > 0
-            ? `Su cumplimiento de deadlines subió ${delta} pts vs. el trimestre anterior.`
-            : `Su cumplimiento de deadlines bajó ${Math.abs(delta)} pts vs. el trimestre anterior.`,
+            ? `Su cumplimiento de deadlines subió ${delta} pts vs. el mes anterior.`
+            : `Su cumplimiento de deadlines bajó ${Math.abs(delta)} pts vs. el mes anterior.`,
         delta,
       };
     })
@@ -124,11 +129,17 @@ export function DeadlinesTab() {
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center justify-between gap-2 rounded-[var(--bp-radius-md)] border border-[var(--bp-border)] bg-[var(--bp-surface)] px-3 py-2">
-        <Badge color="success">Datos reales · Jira (proyecto APAC)</Badge>
+        <Badge color="success">Datos reales · Jira (tablero por estratega)</Badge>
         <span className="text-[11px] text-[var(--bp-ink-soft)]">
           Última sincronización: {new Date(data.fetchedAt).toLocaleString("es-MX", { dateStyle: "medium", timeStyle: "short" })}
         </span>
       </div>
+
+      {withoutBoard.length > 0 && Object.keys(jiraBoards).length < filteredStrategists.length && (
+        <div className="rounded-[var(--bp-radius-md)] border border-dashed border-[var(--bp-border)] bg-[var(--bp-surface)] px-3 py-2 text-[11px] text-[var(--bp-ink-soft)]">
+          {withoutBoard.length} estratega{withoutBoard.length === 1 ? "" : "s"} sin tablero de Jira conectado todavía — configúralo en Admin.
+        </div>
+      )}
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         <StatTile label="Cumplimiento de deadlines" value={`${teamRate}%`} tone={toneFor(teamRate)} />
@@ -144,7 +155,7 @@ export function DeadlinesTab() {
       <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
         <div className="rounded-[var(--bp-radius-lg)] border border-[var(--bp-border)] bg-[var(--bp-surface)] p-4">
           <h3 className="text-[13px] font-semibold text-[var(--bp-ink)]">Tendencia de cumplimiento</h3>
-          <p className="mt-0.5 text-[11px] text-[var(--bp-ink-soft)]">Cumplimiento del equipo por trimestre, independiente del filtro de periodo.</p>
+          <p className="mt-0.5 text-[11px] text-[var(--bp-ink-soft)]">Cumplimiento del equipo por mes, para el año seleccionado.</p>
           <div className="mt-3">
             <TrendSparkline points={teamTrend} color="var(--bp-cyan)" />
           </div>
@@ -172,18 +183,26 @@ export function DeadlinesTab() {
             {rows.every((r) => r.assigned === 0) ? (
               <tr>
                 <td colSpan={4} className="px-3 py-6 text-center text-[12px] text-[var(--bp-ink-soft)]">
-                  Aún no hay tickets con fecha de vencimiento vencida para este periodo en el tablero de Jira.
+                  Aún no hay tickets con fecha de vencimiento vencida para este periodo en los tableros de Jira conectados.
                 </td>
               </tr>
             ) : (
-              rows.map(({ s, assigned, onTime, complianceRate }, i) => (
+              rows.map(({ s, assigned, onTime, complianceRate, boardConfigured }, i) => (
                 <tr key={s.id} className="bp-row-in border-b border-[var(--bp-border)] last:border-0" style={{ animationDelay: `${Math.min(i, 12) * 25}ms` }}>
                   <td className="px-3 py-2.5">
                     <StrategistAvatar strategist={s} />
                   </td>
                   <td className="px-3 py-2.5 text-right font-mono">{onTime}</td>
                   <td className="px-3 py-2.5 text-right font-mono">{assigned}</td>
-                  <td className="px-3 py-2.5 text-right font-mono">{assigned > 0 ? `${complianceRate}%` : "—"}</td>
+                  <td className="px-3 py-2.5 text-right font-mono">
+                    {!boardConfigured ? (
+                      <span className="text-[11px] text-[var(--bp-ink-soft)]">Sin tablero</span>
+                    ) : assigned > 0 ? (
+                      `${complianceRate}%`
+                    ) : (
+                      "—"
+                    )}
+                  </td>
                 </tr>
               ))
             )}
@@ -194,7 +213,7 @@ export function DeadlinesTab() {
       <InsightPanel
         alerts={atRisk.map((x) => ({ text: `${x.s.name} cumplió solo ${x.complianceRate}% de sus deadlines (${x.onTime}/${x.assigned}) según Jira.` }))}
         tips={[
-          "Cuando el incumplimiento es transversal a varios estrategas, revisa la carga total asignada por proyecto en el tablero APAC.",
+          "Cuando el incumplimiento es transversal a varios estrategas, revisa la carga total asignada por proyecto en su tablero.",
           "Los recordatorios 48h antes del vencimiento reducen significativamente los retrasos evitables.",
           "Distingue retrasos por dependencias externas (cliente) de retrasos por planeación interna.",
         ]}

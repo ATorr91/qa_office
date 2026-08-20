@@ -80,7 +80,17 @@
       "Bash(npm ls *)",
       "Bash(npx tsc *)",
       "Bash(git check-ignore *)",
-      "Bash(open -e /Users/alantorres/Desktop/qa_office/.env.local)"
+      "Bash(open -e /Users/alantorres/Desktop/qa_office/.env.local)",
+      "Bash(ssh -o StrictHostKeyChecking=accept-new -o BatchMode=yes -T git@gitlab.com)",
+      "Bash(echo \"exit code: $?\")",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" https://qa-office.vercel.app --max-time 8)",
+      "Bash(git fetch *)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" https://qa-office.vercel.app --max-time 10)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" https://qa-office.vercel.app/dashboard-estrategas)",
+      "Bash(sed -i '' 's/QuarterDeadlineCount/MonthDeadlineCount/g' src/lib/dashboardFilters.tsx src/components/dashboard/tabs/DeadlinesTab.tsx)",
+      "Bash(sed -i '' 's/no solo a la fecha final del trimestre\\\\./no solo a la fecha final del periodo./' src/components/dashboard/tabs/OkrKpiTab.tsx)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" http://localhost:3000/)",
+      "Bash(pkill -f \"next dev\")"
     ]
   }
 }
