@@ -10,9 +10,7 @@ import OkrKpiTab from "@/components/dashboard/tabs/OkrKpiTab";
 import PeerReviewsTab from "@/components/dashboard/tabs/PeerReviewsTab";
 import PerformanceTab from "@/components/dashboard/tabs/PerformanceTab";
 import QaTab from "@/components/dashboard/tabs/QaTab";
-import SelfAssessmentTab from "@/components/dashboard/tabs/SelfAssessmentTab";
 import { useDashboardFilters } from "@/lib/dashboardFilters";
-import { getPeriodLabel } from "@/lib/strategists";
 
 const TABS = [
   { value: "desempeno", label: "Evaluación de desempeño" },
@@ -22,7 +20,6 @@ const TABS = [
   { value: "bitacoras", label: "Bitácoras" },
   { value: "qa", label: "Calificación QA" },
   { value: "nps", label: "NPS / Cliente" },
-  { value: "autoevaluacion", label: "Autoevaluación" },
   { value: "historial", label: "Historial" },
 ] as const;
 
@@ -40,10 +37,6 @@ export default function DashboardEstrategasPage() {
             Métricas de Estrategas
           </div>
           <h1 className="mt-1.5 text-2xl font-bold text-[var(--bp-ink)]">Panel operativo del equipo</h1>
-          <p className="mt-1 max-w-2xl text-[13px] text-[var(--bp-ink-soft)]">
-            Seguimiento del desempeño, cumplimiento y calidad de trabajo de los {filteredStrategists.length}{" "}
-            estrategas del equipo · Periodo: <span className="font-semibold text-[var(--bp-ink)]">{getPeriodLabel(period)}</span>
-          </p>
         </div>
 
         <div className="mt-5 flex flex-nowrap gap-0.5 overflow-x-auto border-b border-[var(--bp-border)]">
@@ -82,9 +75,6 @@ export default function DashboardEstrategasPage() {
         </div>
         <div className={`mt-5 ${tab === "nps" ? "" : "hidden"}`}>
           <NpsTab />
-        </div>
-        <div className={`mt-5 ${tab === "autoevaluacion" ? "" : "hidden"}`}>
-          <SelfAssessmentTab />
         </div>
         <div className={`mt-5 ${tab === "historial" ? "" : "hidden"}`}>
           <HistoryTab />

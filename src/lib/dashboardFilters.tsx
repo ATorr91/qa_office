@@ -30,6 +30,23 @@ export interface JiraDeadlinesResponse {
   unconfiguredEmails: string[];
 }
 
+export interface BitacoraMonthCount {
+  expected: number;
+  submitted: number;
+  lastDate: string | null;
+}
+
+export type BitacorasByStrategistId = Record<string, Record<MonthKey, BitacoraMonthCount>>;
+
+export interface BitacorasSyncResponse {
+  configured: boolean;
+  error: string | null;
+  fetchedAt: string;
+  byStrategistId: BitacorasByStrategistId;
+  unmatchedNames: string[];
+  notApplicableIds: string[];
+}
+
 interface DashboardFiltersValue {
   searchQuery: string;
   setSearchQuery: (q: string) => void;
@@ -44,6 +61,9 @@ interface DashboardFiltersValue {
   /** null while the initial fetch is in flight. */
   jiraDeadlines: JiraDeadlinesResponse | null;
   refreshJiraDeadlines: () => void;
+  /** null while the initial fetch is in flight. */
+  bitacorasSync: BitacorasSyncResponse | null;
+  refreshBitacorasSync: () => void;
 }
 
 const DashboardFiltersContext = createContext<DashboardFiltersValue | null>(null);
@@ -95,6 +115,38 @@ export function DashboardFiltersProvider({ children }: { children: ReactNode }) 
     setRefreshToken((n) => n + 1);
   }
 
+  const [bitacorasSync, setBitacorasSync] = useState<BitacorasSyncResponse | null>(null);
+  const [bitacorasRefreshToken, setBitacorasRefreshToken] = useState(0);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/bitacoras/sync")
+      .then((res) => res.json())
+      .then((json: BitacorasSyncResponse) => {
+        if (!cancelled) setBitacorasSync(json);
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setBitacorasSync({
+            configured: true,
+            error: "No se pudo conectar con el servidor de la aplicación.",
+            fetchedAt: new Date(0).toISOString(),
+            byStrategistId: {},
+            unmatchedNames: [],
+            notApplicableIds: [],
+          });
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [bitacorasRefreshToken]);
+
+  function refreshBitacorasSync() {
+    setBitacorasRefreshToken((n) => n + 1);
+  }
+
   function setPeriod(p: Period) {
     setPeriodState(p);
     setSpecificDateState(null);
@@ -133,8 +185,10 @@ export function DashboardFiltersProvider({ children }: { children: ReactNode }) 
       lastUpdated: DASHBOARD_LAST_UPDATED,
       jiraDeadlines,
       refreshJiraDeadlines,
+      bitacorasSync,
+      refreshBitacorasSync,
     }),
-    [searchQuery, period, specificDate, filteredStrategists, jiraDeadlines],
+    [searchQuery, period, specificDate, filteredStrategists, jiraDeadlines, bitacorasSync],
   );
 
   return <DashboardFiltersContext.Provider value={value}>{children}</DashboardFiltersContext.Provider>;

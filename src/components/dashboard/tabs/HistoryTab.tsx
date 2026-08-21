@@ -1,11 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { Fragment, useState } from "react";
 import Badge from "@/components/ui/Badge";
 import StrategistAvatar from "@/components/dashboard/StrategistAvatar";
 import { useStrategistRecords } from "@/lib/strategistRecords";
-import { getEffectiveRecordForMonth, useStrategistDataInputs } from "@/lib/strategistRecords";
-import { allMonthsWithData, getMonthLabel, STRATEGISTS } from "@/lib/strategists";
+import { getEffectiveRecordForMonth, useStrategistDataInputs, type EffectiveRecord } from "@/lib/strategistRecords";
+import { CURRENT_YEAR, getMonthLabel, monthsInYear, STRATEGISTS, type MonthKey, type Strategist } from "@/lib/strategists";
 
 const NO_DATA = "—";
 
@@ -13,23 +13,63 @@ function fmtPct(v: number | null): string {
   return v !== null ? `${v}%` : NO_DATA;
 }
 
+function MonthBreakdown({ month, entries }: { month: MonthKey; entries: { s: Strategist; r: EffectiveRecord }[] }) {
+  return (
+    <tr>
+      <td colSpan={6} className="bg-[var(--bp-surface-alt)] px-3 py-3">
+        <div className="overflow-x-auto rounded-[var(--bp-radius-sm)] border border-[var(--bp-border)] bg-[var(--bp-surface)]">
+          <table className="w-full min-w-[480px] border-collapse text-left text-[12px]">
+            <thead>
+              <tr className="border-b border-[var(--bp-border)] text-[10px] uppercase tracking-[0.04em] text-[var(--bp-ink-soft)]">
+                <th className="px-3 py-2">Estratega</th>
+                <th className="px-3 py-2 text-right">Desempeño</th>
+                <th className="px-3 py-2 text-right">Deadlines</th>
+                <th className="px-3 py-2 text-right">Bitácoras</th>
+                <th className="px-3 py-2 text-right">QA</th>
+                <th className="px-3 py-2 text-right">NPS</th>
+              </tr>
+            </thead>
+            <tbody>
+              {entries.map(({ s, r }) => (
+                <tr key={s.id} className="border-b border-[var(--bp-border)] last:border-0">
+                  <td className="px-3 py-2">
+                    <StrategistAvatar strategist={s} />
+                  </td>
+                  <td className="px-3 py-2 text-right font-mono">{fmtPct(r.performanceScore)}</td>
+                  <td className="px-3 py-2 text-right font-mono">{fmtPct(r.deadlineComplianceRate)}</td>
+                  <td className="px-3 py-2 text-right font-mono">{fmtPct(r.bitacoraComplianceRate)}</td>
+                  <td className="px-3 py-2 text-right font-mono">{fmtPct(r.qaScore)}</td>
+                  <td className="px-3 py-2 text-right font-mono">{r.npsScore ?? NO_DATA}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </td>
+    </tr>
+  );
+}
+
 function MonthlyHistory() {
-  const { filteredStrategists, recordsByStrategist, jiraDeadlines } = useStrategistDataInputs();
-  const months = [...allMonthsWithData()].reverse();
+  const { filteredStrategists, recordsByStrategist, jiraDeadlines, bitacorasSync } = useStrategistDataInputs();
+  const [expandedMonth, setExpandedMonth] = useState<MonthKey | null>(null);
+  const months = [...monthsInYear(CURRENT_YEAR)].reverse();
 
   const rows = months.map((m) => {
-    const records = filteredStrategists.map((s) => getEffectiveRecordForMonth(s, m, recordsByStrategist, jiraDeadlines));
-    const avg = (sel: (r: (typeof records)[number]) => number | null) => {
-      const vals = records.map(sel).filter((v): v is number => v !== null);
+    const entries = filteredStrategists.map((s) => ({ s, r: getEffectiveRecordForMonth(s, m, recordsByStrategist, jiraDeadlines, bitacorasSync) }));
+    const avg = (sel: (r: EffectiveRecord) => number | null) => {
+      const vals = entries.map(({ r }) => sel(r)).filter((v): v is number => v !== null);
       return vals.length > 0 ? Math.round(vals.reduce((a, b) => a + b, 0) / vals.length) : null;
     };
     return {
       month: m,
+      entries,
       performance: avg((r) => r.performanceScore),
       deadlines: avg((r) => r.deadlineComplianceRate),
+      bitacoras: avg((r) => r.bitacoraComplianceRate),
       qa: avg((r) => r.qaScore),
       nps: avg((r) => r.npsScore),
-      hasAnyData: records.some((r) => r.hasAnyData),
+      hasAnyData: entries.some(({ r }) => r.hasAnyData),
     };
   });
 
@@ -41,6 +81,7 @@ function MonthlyHistory() {
             <th className="px-3 py-2">Mes</th>
             <th className="px-3 py-2 text-right">Desempeño</th>
             <th className="px-3 py-2 text-right">Deadlines</th>
+            <th className="px-3 py-2 text-right">Bitácoras</th>
             <th className="px-3 py-2 text-right">QA</th>
             <th className="px-3 py-2 text-right">NPS</th>
           </tr>
@@ -48,20 +89,34 @@ function MonthlyHistory() {
         <tbody>
           {rows.every((r) => !r.hasAnyData) ? (
             <tr>
-              <td colSpan={5} className="px-3 py-6 text-center text-[12px] text-[var(--bp-ink-soft)]">
+              <td colSpan={6} className="px-3 py-6 text-center text-[12px] text-[var(--bp-ink-soft)]">
                 Aún no hay historial cargado. Ve a Admin para empezar a registrar meses.
               </td>
             </tr>
           ) : (
-            rows.map((r, i) => (
-              <tr key={r.month} className="bp-row-in border-b border-[var(--bp-border)] last:border-0" style={{ animationDelay: `${Math.min(i, 12) * 20}ms` }}>
-                <td className="px-3 py-2.5 font-semibold text-[var(--bp-ink)]">{getMonthLabel(r.month)}</td>
-                <td className="px-3 py-2.5 text-right font-mono">{fmtPct(r.performance)}</td>
-                <td className="px-3 py-2.5 text-right font-mono">{fmtPct(r.deadlines)}</td>
-                <td className="px-3 py-2.5 text-right font-mono">{fmtPct(r.qa)}</td>
-                <td className="px-3 py-2.5 text-right font-mono">{r.nps ?? NO_DATA}</td>
-              </tr>
-            ))
+            rows.map((r, i) => {
+              const expanded = expandedMonth === r.month;
+              return (
+                <Fragment key={r.month}>
+                  <tr
+                    className="bp-row-in cursor-pointer border-b border-[var(--bp-border)] last:border-0 hover:bg-[var(--bp-surface-alt)]"
+                    style={{ animationDelay: `${Math.min(i, 12) * 20}ms` }}
+                    onClick={() => setExpandedMonth(expanded ? null : r.month)}
+                  >
+                    <td className="px-3 py-2.5 font-semibold text-[var(--bp-ink)]">
+                      <span className="mr-1.5 inline-block w-3 text-[var(--bp-ink-soft)]">{expanded ? "▾" : "▸"}</span>
+                      {getMonthLabel(r.month)}
+                    </td>
+                    <td className="px-3 py-2.5 text-right font-mono">{fmtPct(r.performance)}</td>
+                    <td className="px-3 py-2.5 text-right font-mono">{fmtPct(r.deadlines)}</td>
+                    <td className="px-3 py-2.5 text-right font-mono">{fmtPct(r.bitacoras)}</td>
+                    <td className="px-3 py-2.5 text-right font-mono">{fmtPct(r.qa)}</td>
+                    <td className="px-3 py-2.5 text-right font-mono">{r.nps ?? NO_DATA}</td>
+                  </tr>
+                  {expanded && <MonthBreakdown month={r.month} entries={r.entries} />}
+                </Fragment>
+              );
+            })
           )}
         </tbody>
       </table>

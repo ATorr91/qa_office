@@ -328,21 +328,9 @@ export function AdminDataForm() {
         <OkrsEditor okrs={form.okrs} onChange={(v) => update("okrs", v)} />
       </Section>
 
-      <Section title="Bitácoras">
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-          <NumberField label="Bitácoras esperadas" value={form.bitacorasExpected} onChange={(v) => update("bitacorasExpected", v)} />
-          <NumberField label="Bitácoras registradas" value={form.bitacorasSubmitted} onChange={(v) => update("bitacorasSubmitted", v)} />
-          <div className="flex flex-col gap-1">
-            <label className="text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--bp-ink-soft)]">Última bitácora</label>
-            <input
-              type="date"
-              value={form.lastBitacoraDate ?? ""}
-              onChange={(e) => update("lastBitacoraDate", e.target.value || null)}
-              className={INPUT_CLASS}
-            />
-          </div>
-        </div>
-      </Section>
+      <div className="rounded-[var(--bp-radius-md)] border border-dashed border-[var(--bp-border)] bg-[var(--bp-surface)] p-3 text-[12px] text-[var(--bp-ink-soft)]">
+        Cumplimiento de bitácoras no se edita aquí — se sincroniza en vivo desde la hoja de Google Sheets de bitácoras semanales.
+      </div>
 
       <Section title="Calificación QA">
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
@@ -354,9 +342,7 @@ export function AdminDataForm() {
 
       <Section title="NPS / Feedback del cliente">
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-          <NumberField label="Clientes promotores" value={form.npsPromoters} onChange={(v) => update("npsPromoters", v)} />
-          <NumberField label="Clientes pasivos" value={form.npsPassives} onChange={(v) => update("npsPassives", v)} />
-          <NumberField label="Clientes detractores" value={form.npsDetractors} onChange={(v) => update("npsDetractors", v)} />
+          <NumberField label="Calificación NPS (-100 a 100)" value={form.npsScore} onChange={(v) => update("npsScore", v)} />
         </div>
       </Section>
 

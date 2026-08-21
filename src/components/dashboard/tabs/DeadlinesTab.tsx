@@ -75,6 +75,14 @@ export function DeadlinesTab() {
 
   const monthsForCurrentPeriod = monthsForPeriod(period);
 
+  if (monthsForCurrentPeriod.length === 0) {
+    return (
+      <div className="rounded-[var(--bp-radius-lg)] border border-dashed border-[var(--bp-border)] bg-[var(--bp-surface)] p-6 text-center text-[12px] text-[var(--bp-ink-soft)]">
+        No existe información para este periodo — el tracking empezó en julio 2026.
+      </div>
+    );
+  }
+
   const rows = filteredStrategists
     .map((s) => {
       const c = sumMonths(data.byEmail, s.email, monthsForCurrentPeriod);
@@ -103,6 +111,7 @@ export function DeadlinesTab() {
 
   const deltaComments = filteredStrategists
     .map((s) => {
+      if (monthsForCurrentPeriod.length === 0) return null;
       const currMonth = monthsForCurrentPeriod[monthsForCurrentPeriod.length - 1];
       const prevMonth = getPreviousMonth(currMonth);
       if (!prevMonth) return null;
@@ -212,11 +221,6 @@ export function DeadlinesTab() {
 
       <InsightPanel
         alerts={atRisk.map((x) => ({ text: `${x.s.name} cumplió solo ${x.complianceRate}% de sus deadlines (${x.onTime}/${x.assigned}) según Jira.` }))}
-        tips={[
-          "Cuando el incumplimiento es transversal a varios estrategas, revisa la carga total asignada por proyecto en su tablero.",
-          "Los recordatorios 48h antes del vencimiento reducen significativamente los retrasos evitables.",
-          "Distingue retrasos por dependencias externas (cliente) de retrasos por planeación interna.",
-        ]}
         comments={deltaComments}
       />
     </div>

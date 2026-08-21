@@ -1,6 +1,6 @@
 import { getEffectiveRecord, type ManualMonthlyData } from "./strategistRecords";
 import { getMonthLabel, getPeriodLabel, type MonthKey, type Strategist } from "./strategists";
-import type { DeadlinesByEmail, Period } from "./dashboardFilters";
+import type { BitacorasByStrategistId, DeadlinesByEmail, Period } from "./dashboardFilters";
 
 function periodLabel(period: Period): string {
   return getPeriodLabel(period);
@@ -13,6 +13,7 @@ export function dashboardToMarkdown(
   period: Period,
   recordsByStrategist: Record<string, Partial<Record<MonthKey, ManualMonthlyData>>>,
   jiraDeadlines: { configured: boolean; error: string | null; byEmail: DeadlinesByEmail } | null,
+  bitacorasSync: { configured: boolean; error: string | null; byStrategistId: BitacorasByStrategistId } | null = null,
 ): string {
   const lines: string[] = [];
   lines.push("# Dashboard de Estrategas — BluePixel Studio");
@@ -25,7 +26,8 @@ export function dashboardToMarkdown(
   for (const s of strategists) {
     const manualByMonth = recordsByStrategist[s.id] ?? {};
     const deadlinesByMonth = jiraDeadlines?.configured && !jiraDeadlines.error ? jiraDeadlines.byEmail[s.email] ?? null : null;
-    const r = getEffectiveRecord(manualByMonth, deadlinesByMonth, period);
+    const bitacorasByMonth = bitacorasSync?.configured && !bitacorasSync.error ? bitacorasSync.byStrategistId[s.id] ?? null : null;
+    const r = getEffectiveRecord(manualByMonth, deadlinesByMonth, period, bitacorasByMonth);
 
     lines.push(`## ${s.name} — ${s.role}`);
     lines.push("");
@@ -33,9 +35,9 @@ export function dashboardToMarkdown(
     lines.push(`- **Peer reviews:** ${r.peerReviewScore !== null ? `${r.peerReviewScore}%` : NO_DATA}${r.peerReviewCount !== null ? ` (${r.peerReviewCount} evaluaciones recibidas)` : ""}`);
     lines.push(`- **Cumplimiento de OKRs:** ${r.okrCompletion !== null ? `${r.okrCompletion}%` : NO_DATA} · **Cumplimiento de KPIs:** ${r.kpiCompliance !== null ? `${r.kpiCompliance}%` : NO_DATA}`);
     lines.push(`- **Cumplimiento de deadlines (Jira):** ${r.deadlineComplianceRate !== null ? `${r.deadlineComplianceRate}% (${r.deadlinesOnTime}/${r.deadlinesAssigned})` : jiraDeadlines?.configured ? "sin deadlines vencidos en este periodo" : "Jira no conectado"}`);
-    lines.push(`- **Cumplimiento de bitácoras:** ${r.bitacoraComplianceRate !== null ? `${r.bitacoraComplianceRate}% (${r.bitacorasSubmitted}/${r.bitacorasExpected})` : NO_DATA}${r.lastBitacoraDate ? ` · última: ${r.lastBitacoraDate}` : ""}`);
+    lines.push(`- **Cumplimiento de bitácoras (Google Sheets):** ${r.bitacoraComplianceRate !== null ? `${r.bitacoraComplianceRate}% (${r.bitacorasSubmitted}/${r.bitacorasExpected})` : NO_DATA}${r.lastBitacoraDate ? ` · última: ${r.lastBitacoraDate}` : ""}`);
     lines.push(`- **Calificación QA:** ${r.qaScore !== null ? `${r.qaScore}%` : NO_DATA}${r.qaReviewsCount !== null ? ` (${r.qaReviewsCount} entregables revisados, ${r.qaIssuesFound ?? 0} hallazgos)` : ""}`);
-    lines.push(`- **NPS de cliente:** ${r.npsScore !== null ? r.npsScore : NO_DATA}${r.npsResponses !== null ? ` (${r.npsPromoters ?? 0} promotores, ${r.npsPassives ?? 0} pasivos, ${r.npsDetractors ?? 0} detractores de ${r.npsResponses} respuestas)` : ""}`);
+    lines.push(`- **NPS de cliente:** ${r.npsScore !== null ? r.npsScore : NO_DATA}`);
     lines.push("");
     if (r.okrs.length > 0) {
       lines.push("**OKRs del periodo:**");

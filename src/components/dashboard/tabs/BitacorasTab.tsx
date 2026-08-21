@@ -1,9 +1,12 @@
 "use client";
 
+import Badge from "@/components/ui/Badge";
 import BarList from "@/components/dashboard/BarList";
 import InsightPanel from "@/components/dashboard/InsightPanel";
+import Skeleton from "@/components/ui/Skeleton";
 import StatTile from "@/components/dashboard/StatTile";
 import StrategistAvatar from "@/components/dashboard/StrategistAvatar";
+import { useDashboardFilters } from "@/lib/dashboardFilters";
 import { useEffectiveRecords } from "@/lib/strategistRecords";
 import { daysSince } from "@/lib/strategists";
 
@@ -18,7 +21,46 @@ function toneFor(score: number): "good" | "warning" | "danger" {
 }
 
 export function BitacorasTab() {
+  const { bitacorasSync } = useDashboardFilters();
   const rows = useEffectiveRecords();
+
+  if (!bitacorasSync) {
+    return (
+      <div className="flex flex-col gap-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+          <Skeleton className="h-[72px]" />
+          <Skeleton className="h-[72px]" />
+          <Skeleton className="h-[72px]" />
+        </div>
+        <Skeleton className="h-56" />
+      </div>
+    );
+  }
+
+  if (!bitacorasSync.configured) {
+    return (
+      <div className="rounded-[var(--bp-radius-lg)] border border-dashed border-[var(--bp-border)] bg-[var(--bp-surface)] p-6 text-center">
+        <h3 className="text-[13px] font-semibold text-[var(--bp-ink)]">Google Sheets no está configurado</h3>
+        <p className="mx-auto mt-1 max-w-md text-[12px] leading-relaxed text-[var(--bp-ink-soft)]">
+          Agrega <code className="rounded bg-[var(--bp-surface-alt)] px-1 py-0.5">GOOGLE_SERVICE_ACCOUNT_EMAIL</code>,{" "}
+          <code className="rounded bg-[var(--bp-surface-alt)] px-1 py-0.5">GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY</code> y{" "}
+          <code className="rounded bg-[var(--bp-surface-alt)] px-1 py-0.5">GOOGLE_SHEET_ID</code> en un archivo{" "}
+          <code className="rounded bg-[var(--bp-surface-alt)] px-1 py-0.5">.env.local</code> y reinicia el servidor para conectar la
+          hoja de bitácoras.
+        </p>
+      </div>
+    );
+  }
+
+  if (bitacorasSync.error) {
+    return (
+      <div className="rounded-[var(--bp-radius-lg)] border border-[var(--bp-danger)]/30 bg-[var(--bp-danger)]/5 p-6 text-center">
+        <h3 className="text-[13px] font-semibold text-[var(--bp-danger)]">No se pudo conectar con Google Sheets</h3>
+        <p className="mx-auto mt-1 max-w-md text-[12px] leading-relaxed text-[var(--bp-ink)]">{bitacorasSync.error}</p>
+      </div>
+    );
+  }
+
   const withData = rows.filter((x) => x.r.bitacoraComplianceRate !== null).sort((a, b) => b.r.bitacoraComplianceRate! - a.r.bitacoraComplianceRate!);
 
   const totalExpected = rows.reduce((acc, x) => acc + (x.r.bitacorasExpected ?? 0), 0);
@@ -29,6 +71,19 @@ export function BitacorasTab() {
 
   return (
     <div className="flex flex-col gap-4">
+      <div className="flex flex-wrap items-center justify-between gap-2 rounded-[var(--bp-radius-md)] border border-[var(--bp-border)] bg-[var(--bp-surface)] px-3 py-2">
+        <Badge color="success">Datos reales · Google Sheets (bitácoras semanales)</Badge>
+        <span className="text-[11px] text-[var(--bp-ink-soft)]">
+          Última sincronización: {new Date(bitacorasSync.fetchedAt).toLocaleString("es-MX", { dateStyle: "medium", timeStyle: "short" })}
+        </span>
+      </div>
+
+      {bitacorasSync.unmatchedNames.length > 0 && (
+        <div className="rounded-[var(--bp-radius-md)] border border-dashed border-[var(--bp-border)] bg-[var(--bp-surface)] px-3 py-2 text-[11px] text-[var(--bp-ink-soft)]">
+          La hoja tiene filas que no coinciden con ningún estratega registrado: {bitacorasSync.unmatchedNames.join(", ")}.
+        </div>
+      )}
+
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         <StatTile label="Cumplimiento de bitácoras" value={teamRate !== null ? `${teamRate}%` : NO_DATA_LABEL} tone={teamRate !== null ? toneFor(teamRate) : "neutral"} />
         <StatTile label="Bitácoras registradas" value={`${totalSubmitted} / ${totalExpected}`} sublabel="En el periodo seleccionado" />
@@ -71,20 +126,29 @@ export function BitacorasTab() {
               </tr>
             )}
             {rows.map(({ s, r }, i) => {
-              const isOverdue = r.lastBitacoraDate && daysSince(r.lastBitacoraDate) > OVERDUE_DAYS;
+              const notApplicable = bitacorasSync.notApplicableIds.includes(s.id);
+              const isOverdue = !notApplicable && r.lastBitacoraDate && daysSince(r.lastBitacoraDate) > OVERDUE_DAYS;
               return (
                 <tr key={s.id} className="bp-row-in border-b border-[var(--bp-border)] last:border-0" style={{ animationDelay: `${Math.min(i, 12) * 25}ms` }}>
                   <td className="px-3 py-2.5">
                     <StrategistAvatar strategist={s} />
                   </td>
                   <td className="px-3 py-2.5 text-right font-mono">
-                    {r.bitacorasExpected !== null ? `${r.bitacorasSubmitted ?? 0} / ${r.bitacorasExpected}` : "—"}
+                    {notApplicable ? "—" : r.bitacorasExpected !== null ? `${r.bitacorasSubmitted ?? 0} / ${r.bitacorasExpected}` : "—"}
                   </td>
                   <td className="px-3 py-2.5 text-right font-mono">
-                    {r.bitacoraComplianceRate !== null ? `${r.bitacoraComplianceRate}%` : <span className="text-[11px] text-[var(--bp-ink-soft)]">{NO_DATA_LABEL}</span>}
+                    {notApplicable ? (
+                      <>
+                        100% <span className="text-[11px] text-[var(--bp-ink-soft)]">· No aplica</span>
+                      </>
+                    ) : r.bitacoraComplianceRate !== null ? (
+                      `${r.bitacoraComplianceRate}%`
+                    ) : (
+                      <span className="text-[11px] text-[var(--bp-ink-soft)]">{NO_DATA_LABEL}</span>
+                    )}
                   </td>
                   <td className={`px-3 py-2.5 font-mono ${isOverdue ? "text-[var(--bp-danger)]" : "text-[var(--bp-ink-soft)]"}`}>
-                    {r.lastBitacoraDate ?? "—"}
+                    {notApplicable ? "No aplica por el momento" : r.lastBitacoraDate ?? "—"}
                     {isOverdue && r.lastBitacoraDate ? ` (hace ${daysSince(r.lastBitacoraDate)} días)` : ""}
                   </td>
                 </tr>
@@ -102,11 +166,6 @@ export function BitacorasTab() {
           ...behind
             .filter((x) => !overdue.some((o) => o.s.id === x.s.id))
             .map((x) => ({ text: `${x.s.name} tiene ${x.r.bitacoraComplianceRate}% de cumplimiento de bitácoras — por debajo de ${AT_RISK_THRESHOLD}%.` })),
-        ]}
-        tips={[
-          "Las bitácoras son la fuente más directa de visibilidad diaria — atrasos aquí suelen anticipar problemas en otras métricas.",
-          "Considera un recordatorio automático si un estratega no registra en 3 días hábiles.",
-          "Revisa si el formato de la bitácora es demasiado largo; simplificarlo suele mejorar el cumplimiento.",
         ]}
       />
     </div>

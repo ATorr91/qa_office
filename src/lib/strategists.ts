@@ -11,7 +11,7 @@ export type Period = string;
 
 export const DASHBOARD_LAST_UPDATED = "2026-08-17";
 
-const [CURRENT_YEAR, CURRENT_MONTH] = DASHBOARD_LAST_UPDATED.split("-").slice(0, 2).map(Number) as [number, number];
+export const [CURRENT_YEAR, CURRENT_MONTH] = DASHBOARD_LAST_UPDATED.split("-").slice(0, 2).map(Number) as [number, number];
 
 export const EARLIEST_YEAR = CURRENT_YEAR - 1;
 
@@ -64,13 +64,20 @@ export function isFutureMonth(mk: MonthKey): boolean {
   return year > CURRENT_YEAR || (year === CURRENT_YEAR && month > CURRENT_MONTH);
 }
 
-/** All months in a year that have already happened (all 12 for past years, elapsed ones for the current year). */
-export function monthsInYear(year: number): MonthKey[] {
-  const maxMonth = year === CURRENT_YEAR ? CURRENT_MONTH : year > CURRENT_YEAR ? 0 : 12;
-  return Array.from({ length: maxMonth }, (_, i) => monthKey(year, i + 1));
+/** Nothing gets tracked before this month — the whole dashboard treats earlier months as "no data", not zero. */
+export const TRACKING_START_MONTH: MonthKey = "2026-07";
+
+export function isBeforeTrackingStart(mk: MonthKey): boolean {
+  return mk < TRACKING_START_MONTH;
 }
 
-/** Every elapsed month across every selectable year, oldest first — the full history range. */
+/** All months in a year that have already happened AND are within the tracked range. */
+export function monthsInYear(year: number): MonthKey[] {
+  const maxMonth = year === CURRENT_YEAR ? CURRENT_MONTH : year > CURRENT_YEAR ? 0 : 12;
+  return Array.from({ length: maxMonth }, (_, i) => monthKey(year, i + 1)).filter((mk) => !isBeforeTrackingStart(mk));
+}
+
+/** Every elapsed, tracked month across every selectable year, oldest first — the full history range. */
 export function allMonthsWithData(): MonthKey[] {
   return YEARS.flatMap((y) => monthsInYear(y));
 }
@@ -87,9 +94,10 @@ export function periodYear(p: Period): number {
   return Number(p.split("-")[0]);
 }
 
-/** Resolves a period to the concrete list of months it covers. */
+/** Resolves a period to the concrete list of months it covers — months before tracking started never count. */
 export function monthsForPeriod(p: Period): MonthKey[] {
-  return isAnnualPeriod(p) ? monthsInYear(periodYear(p)) : [p];
+  const months = isAnnualPeriod(p) ? monthsInYear(periodYear(p)) : [p];
+  return months.filter((mk) => !isBeforeTrackingStart(mk));
 }
 
 export function getPeriodLabel(p: Period): string {
@@ -101,7 +109,8 @@ export function getDefaultPeriod(): Period {
 }
 
 /** The month immediately before the given one, or null if it's before tracking started. */
-export function getPreviousMonth(mk: MonthKey): MonthKey | null {
+export function getPreviousMonth(mk: MonthKey | undefined): MonthKey | null {
+  if (!mk) return null;
   const { year, month } = parseMonthKey(mk);
   const prevYear = month === 1 ? year - 1 : year;
   const prevMonth = month === 1 ? 12 : month - 1;
@@ -169,13 +178,13 @@ const AVATAR_COLORS = ["var(--bp-blue)", "var(--bp-magenta)", "var(--bp-purple)"
 const PROFILES: { id: string; name: string; role: string; email: string }[] = [
   { id: "adriana-ruiz", name: "Adriana Ruiz", role: "Estratega", email: "adriana.ruiz@bluepixel.mx" },
   { id: "alexis-aguilar", name: "Alexis Aguilar", role: "Estratega", email: "alexis.aguilar@bluepixel.mx" },
-  { id: "carlos-gonzalez", name: "Carlos González", role: "Estratega", email: "carlos.gonzalez@bluepixel.mx" },
+  { id: "carlos-gonzalez", name: "Carlos Quijano", role: "Estratega", email: "carlos.gonzalez@bluepixel.mx" },
   { id: "daniel-gamboa", name: "Daniel Gamboa", role: "Estratega", email: "daniel.gamboa@bluepixel.mx" },
   { id: "johanna-quiroga", name: "Johanna Quiroga", role: "Estratega", email: "johanna.quiroga@bluepixel.mx" },
   { id: "jorge-de-buen", name: "Jorge de Buen", role: "Estratega", email: "jorge@bluepixel.mx" },
   { id: "lucero-cervantes", name: "Lucero Cervantes", role: "Estratega", email: "lucero.cervantes@bluepixel.mx" },
   { id: "luis-rodriguez", name: "Luis Rodríguez", role: "Estratega", email: "luis.rodriguez@bluepixel.mx" },
-  { id: "camila", name: "Camila", role: "Estratega", email: "camila@bluepixel.mx" },
+  { id: "camila", name: "Camila Mora", role: "Estratega", email: "camila@bluepixel.mx" },
   { id: "montserrat-hernandez", name: "Montserrat Hernández", role: "Estratega", email: "montserrat.hernandez@bluepixel.mx" },
 ];
 

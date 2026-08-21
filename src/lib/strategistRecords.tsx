@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
-import { useDashboardFilters, type DeadlinesByEmail } from "@/lib/dashboardFilters";
+import { useDashboardFilters, type BitacorasByStrategistId, type DeadlinesByEmail } from "@/lib/dashboardFilters";
 import {
   monthsForPeriod,
   pct,
@@ -25,15 +25,10 @@ export interface ManualMonthlyData {
   okrCompletion: number | null;
   kpiCompliance: number | null;
   okrs: Okr[];
-  bitacorasExpected: number | null;
-  bitacorasSubmitted: number | null;
-  lastBitacoraDate: string | null;
   qaScore: number | null;
   qaReviewsCount: number | null;
   qaIssuesFound: number | null;
-  npsPromoters: number | null;
-  npsPassives: number | null;
-  npsDetractors: number | null;
+  npsScore: number | null;
   selfAssessmentBiggestWin: string;
   selfAssessmentMistakeLearning: string;
   selfAssessmentSkillToDevelop: string;
@@ -46,15 +41,10 @@ export const EMPTY_MONTHLY_DATA: ManualMonthlyData = {
   okrCompletion: null,
   kpiCompliance: null,
   okrs: [],
-  bitacorasExpected: null,
-  bitacorasSubmitted: null,
-  lastBitacoraDate: null,
   qaScore: null,
   qaReviewsCount: null,
   qaIssuesFound: null,
-  npsPromoters: null,
-  npsPassives: null,
-  npsDetractors: null,
+  npsScore: null,
   selfAssessmentBiggestWin: "",
   selfAssessmentMistakeLearning: "",
   selfAssessmentSkillToDevelop: "",
@@ -164,10 +154,6 @@ export interface EffectiveRecord {
   qaReviewsCount: number | null;
   qaIssuesFound: number | null;
   npsScore: number | null;
-  npsResponses: number | null;
-  npsPromoters: number | null;
-  npsPassives: number | null;
-  npsDetractors: number | null;
   selfAssessments: { month: MonthKey; biggestWin: string; mistakeLearning: string; skillToDevelop: string }[];
   hasAnyData: boolean;
 }
@@ -189,15 +175,23 @@ export interface MonthDeadlineCount {
   onTime: number;
 }
 
+export interface BitacoraMonthCount {
+  expected: number;
+  submitted: number;
+  lastDate: string | null;
+}
+
 /**
  * Builds the comparable "effective" view of one strategist's data for a month or the annual
- * period. `deadlinesByMonth` is null when Jira isn't configured/reachable for this strategist
- * (unknown, not zero); a month present but assigned=0 means Jira confirmed no due tickets then.
+ * period. `deadlinesByMonth`/`bitacorasByMonth` are null when their live source (Jira / Google
+ * Sheets) isn't configured/reachable for this strategist (unknown, not zero); a month present
+ * but empty means the source confirmed there was genuinely nothing that month.
  */
 export function getEffectiveRecord(
   manualByMonth: Partial<Record<MonthKey, ManualMonthlyData>>,
   deadlinesByMonth: Partial<Record<MonthKey, MonthDeadlineCount>> | null,
   period: Period,
+  bitacorasByMonth: Partial<Record<MonthKey, BitacoraMonthCount>> | null = null,
 ): EffectiveRecord {
   const months = monthsForPeriod(period);
   const manuals = months.map((m) => manualByMonth[m] ?? EMPTY_MONTHLY_DATA);
@@ -210,22 +204,25 @@ export function getEffectiveRecord(
   const kpiCompliance = avgOrNull(manuals.map((m) => m.kpiCompliance));
   const okrs = manuals.flatMap((m) => m.okrs);
 
-  const bitacorasExpected = sumOrNull(manuals.map((m) => m.bitacorasExpected));
-  const bitacorasSubmitted = sumOrNull(manuals.map((m) => m.bitacorasSubmitted));
-  const bitacoraComplianceRate =
-    bitacorasExpected !== null && bitacorasSubmitted !== null ? pct(bitacorasSubmitted, bitacorasExpected) : null;
-  const lastBitacoraDate = manuals.map((m) => m.lastBitacoraDate).filter((d): d is string => !!d).sort().slice(-1)[0] ?? null;
+  let bitacorasExpected: number | null = null;
+  let bitacorasSubmitted: number | null = null;
+  let bitacoraComplianceRate: number | null = null;
+  let lastBitacoraDate: string | null = null;
+  if (bitacorasByMonth) {
+    const bCounts = months.map((m) => bitacorasByMonth[m]).filter((c): c is BitacoraMonthCount => c !== undefined);
+    if (bCounts.length > 0) {
+      bitacorasExpected = bCounts.reduce((acc, c) => acc + c.expected, 0);
+      bitacorasSubmitted = bCounts.reduce((acc, c) => acc + c.submitted, 0);
+      bitacoraComplianceRate = pct(bitacorasSubmitted, bitacorasExpected);
+      lastBitacoraDate = bCounts.map((c) => c.lastDate).filter((d): d is string => !!d).sort().slice(-1)[0] ?? null;
+    }
+  }
 
   const qaScore = avgOrNull(manuals.map((m) => m.qaScore));
   const qaReviewsCount = sumOrNull(manuals.map((m) => m.qaReviewsCount));
   const qaIssuesFound = sumOrNull(manuals.map((m) => m.qaIssuesFound));
 
-  const npsPromoters = sumOrNull(manuals.map((m) => m.npsPromoters));
-  const npsPassives = sumOrNull(manuals.map((m) => m.npsPassives));
-  const npsDetractors = sumOrNull(manuals.map((m) => m.npsDetractors));
-  const hasNpsData = npsPromoters !== null || npsPassives !== null || npsDetractors !== null;
-  const npsResponses = hasNpsData ? (npsPromoters ?? 0) + (npsPassives ?? 0) + (npsDetractors ?? 0) : null;
-  const npsScore = hasNpsData && npsResponses !== null && npsResponses > 0 ? Math.round((((npsPromoters ?? 0) - (npsDetractors ?? 0)) / npsResponses) * 100) : null;
+  const npsScore = avgOrNull(manuals.map((m) => m.npsScore));
 
   let deadlinesAssigned = 0;
   let deadlinesOnTime = 0;
@@ -291,10 +288,6 @@ export function getEffectiveRecord(
     qaReviewsCount,
     qaIssuesFound,
     npsScore,
-    npsResponses,
-    npsPromoters,
-    npsPassives,
-    npsDetractors,
     selfAssessments,
     hasAnyData,
   };
@@ -307,22 +300,32 @@ function deadlinesForEmail(
   return jiraDeadlines?.configured && !jiraDeadlines.error ? jiraDeadlines.byEmail[email] ?? {} : null;
 }
 
-/** Combines manual admin-entered data with real Jira deadlines for every currently-filtered strategist. */
+function bitacorasForStrategist(
+  bitacorasSync: { configured: boolean; error: string | null; byStrategistId: BitacorasByStrategistId } | null,
+  strategistId: string,
+): Partial<Record<MonthKey, BitacoraMonthCount>> | null {
+  return bitacorasSync?.configured && !bitacorasSync.error ? bitacorasSync.byStrategistId[strategistId] ?? {} : null;
+}
+
+/** Combines manual admin-entered data with real Jira deadlines and Google Sheets bitácoras for every currently-filtered strategist. */
 export function useEffectiveRecords(): { s: Strategist; r: EffectiveRecord }[] {
-  const { filteredStrategists, period, jiraDeadlines } = useDashboardFilters();
+  const { filteredStrategists, period, jiraDeadlines, bitacorasSync } = useDashboardFilters();
   const { recordsByStrategist } = useStrategistRecords();
 
   return filteredStrategists.map((s) => {
     const manualByMonth = recordsByStrategist[s.id] ?? {};
-    return { s, r: getEffectiveRecord(manualByMonth, deadlinesForEmail(jiraDeadlines, s.email), period) };
+    return {
+      s,
+      r: getEffectiveRecord(manualByMonth, deadlinesForEmail(jiraDeadlines, s.email), period, bitacorasForStrategist(bitacorasSync, s.id)),
+    };
   });
 }
 
 /** Raw inputs for tabs that need to compute a per-month trend (one point per month, not just the selected period). */
 export function useStrategistDataInputs() {
-  const { filteredStrategists, jiraDeadlines } = useDashboardFilters();
+  const { filteredStrategists, jiraDeadlines, bitacorasSync } = useDashboardFilters();
   const { recordsByStrategist } = useStrategistRecords();
-  return { filteredStrategists, recordsByStrategist, jiraDeadlines };
+  return { filteredStrategists, recordsByStrategist, jiraDeadlines, bitacorasSync };
 }
 
 /** Effective record for one strategist in one specific month (for trend charts and history, bypassing the selected period). */
@@ -331,7 +334,13 @@ export function getEffectiveRecordForMonth(
   month: MonthKey,
   recordsByStrategist: RecordsState,
   jiraDeadlines: { configured: boolean; error: string | null; byEmail: DeadlinesByEmail } | null,
+  bitacorasSync: { configured: boolean; error: string | null; byStrategistId: BitacorasByStrategistId } | null = null,
 ): EffectiveRecord {
   const manualByMonth = recordsByStrategist[strategist.id] ?? {};
-  return getEffectiveRecord(manualByMonth, deadlinesForEmail(jiraDeadlines, strategist.email), month);
+  return getEffectiveRecord(
+    manualByMonth,
+    deadlinesForEmail(jiraDeadlines, strategist.email),
+    month,
+    bitacorasForStrategist(bitacorasSync, strategist.id),
+  );
 }

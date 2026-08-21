@@ -1,7 +1,6 @@
 "use client";
 
 import BarList from "@/components/dashboard/BarList";
-import InsightPanel from "@/components/dashboard/InsightPanel";
 import StatTile from "@/components/dashboard/StatTile";
 import StrategistAvatar from "@/components/dashboard/StrategistAvatar";
 import TrendSparkline from "@/components/dashboard/TrendSparkline";
@@ -24,10 +23,9 @@ export function PerformanceTab() {
   const { filteredStrategists, recordsByStrategist, jiraDeadlines } = useStrategistDataInputs();
 
   const withData = rows.filter((x) => x.r.performanceScore !== null).sort((a, b) => b.r.performanceScore! - a.r.performanceScore!);
-  const withoutData = rows.filter((x) => x.r.performanceScore === null);
 
   const teamAvg = withData.length > 0 ? Math.round(withData.reduce((acc, x) => acc + x.r.performanceScore!, 0) / withData.length) : null;
-  const top = withData[0];
+  const top3 = withData.slice(0, 3);
   const atRisk = withData.filter((x) => x.r.performanceScore! < AT_RISK_THRESHOLD);
 
   const teamTrend = monthsInYear(periodYear(period)).map((m) => {
@@ -46,12 +44,26 @@ export function PerformanceTab() {
           tone={teamAvg !== null ? toneFor(teamAvg) : "neutral"}
           sublabel="Promedio de peer review, OKR, KPI, deadlines, bitácoras, QA y NPS"
         />
-        <StatTile
-          label="Mejor desempeño"
-          value={top ? `${top.r.performanceScore}%` : NO_DATA_LABEL}
-          sublabel={top?.s.name}
-          tone="good"
-        />
+        <div className="bp-row-in flex flex-col gap-1.5 rounded-[var(--bp-radius-lg)] border border-[var(--bp-border)] bg-[var(--bp-surface)] p-4">
+          <div className="text-[11px] font-medium uppercase tracking-[0.04em] text-[var(--bp-ink-soft)]">Mejor desempeño</div>
+          {top3.length === 0 ? (
+            <div className="text-[13px] text-[var(--bp-ink-soft)]">{NO_DATA_LABEL}</div>
+          ) : (
+            <div className="mt-0.5 flex flex-col gap-1">
+              {top3.map((x, i) => (
+                <div key={x.s.id} className="flex items-center justify-between gap-2">
+                  <span className="flex min-w-0 items-center gap-1.5">
+                    <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-[var(--bp-surface-alt)] text-[10px] font-bold text-[var(--bp-ink-soft)]">
+                      {i + 1}
+                    </span>
+                    <span className="truncate text-[13px] text-[var(--bp-ink)]">{x.s.name}</span>
+                  </span>
+                  <span className="shrink-0 text-[13px] font-bold text-[var(--bp-green)]">{x.r.performanceScore}%</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
         <StatTile
           label="Estrategas en zona de riesgo"
           value={String(atRisk.length)}
@@ -118,16 +130,6 @@ export function PerformanceTab() {
         </table>
       </div>
 
-      <InsightPanel
-        alerts={atRisk.map((x) => ({ text: `${x.s.name} (${x.s.role}) tiene un score de ${x.r.performanceScore}% — por debajo del umbral de ${AT_RISK_THRESHOLD}%.` }))}
-        tips={[
-          "Programa una conversación 1:1 con los estrategas en zona de riesgo antes de cierre de mes.",
-          "Reconoce públicamente al mejor desempeño para reforzar buenas prácticas replicables.",
-          ...(withoutData.length > 0
-            ? [`${withoutData.length} estratega${withoutData.length === 1 ? "" : "s"} aún no tiene${withoutData.length === 1 ? "" : "n"} información cargada en Admin para este periodo.`]
-            : []),
-        ]}
-      />
     </div>
   );
 }

@@ -12,6 +12,7 @@ import {
   getDefaultPeriod,
   getMonthShortLabel,
   isAnnualPeriod,
+  isBeforeTrackingStart,
   isFutureMonth,
   monthKey,
   periodYear,
@@ -30,6 +31,7 @@ export function DashboardHeader() {
     filteredStrategists,
     lastUpdated,
     jiraDeadlines,
+    bitacorasSync,
   } = useDashboardFilters();
   const { recordsByStrategist } = useStrategistRecords();
   const [downloadOpen, setDownloadOpen] = useState(false);
@@ -37,7 +39,7 @@ export function DashboardHeader() {
   function handleDownloadMarkdown() {
     downloadTextFile(
       "dashboard-estrategas.md",
-      dashboardToMarkdown(filteredStrategists, period, recordsByStrategist, jiraDeadlines),
+      dashboardToMarkdown(filteredStrategists, period, recordsByStrategist, jiraDeadlines, bitacorasSync),
       "text/markdown",
     );
   }
@@ -137,17 +139,19 @@ export function DashboardHeader() {
           {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => {
             const mk = monthKey(selectedYear, m);
             const future = isFutureMonth(mk);
+            const beforeStart = isBeforeTrackingStart(mk);
+            const disabled = future || beforeStart;
             return (
               <button
                 key={mk}
                 type="button"
-                disabled={future}
+                disabled={disabled}
                 onClick={() => setPeriod(mk)}
-                title={future ? "Ese mes todavía no ocurre" : undefined}
+                title={future ? "Ese mes todavía no ocurre" : beforeStart ? "Aún no había tracking en este mes" : undefined}
                 className={`bp-tap rounded-[var(--bp-radius-pill)] border px-2 py-1 text-[11px] font-medium transition-colors duration-[var(--bp-dur)] ${
                   period === mk
                     ? "border-[var(--bp-blue)] bg-[var(--bp-blue)]/10 text-[var(--bp-blue-600)]"
-                    : future
+                    : disabled
                       ? "cursor-not-allowed border-dashed border-[var(--bp-border)] text-[var(--bp-ink-soft)]/50"
                       : "border-[var(--bp-border)] text-[var(--bp-ink-soft)] hover:border-[var(--bp-blue)]"
                 }`}

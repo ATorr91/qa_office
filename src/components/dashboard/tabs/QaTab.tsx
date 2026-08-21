@@ -107,11 +107,6 @@ export function QaTab() {
 
       <InsightPanel
         alerts={atRisk.map((x) => ({ text: `${x.s.name} tiene una calificación QA de ${x.r.qaScore}% con ${x.r.qaIssuesFound ?? 0} hallazgo${(x.r.qaIssuesFound ?? 0) === 1 ? "" : "s"} en sus entregables.` }))}
-        tips={[
-          "Los hallazgos de QA recurrentes en el mismo tipo de entregable suelen apuntar a un problema de plantilla o proceso, no de la persona.",
-          "Revisa los entregables con hallazgos críticos en la retro de cierre de proyecto, no solo al momento de la entrega.",
-          "Un checklist de autorevisión antes de enviar a QA reduce significativamente los hallazgos evitables.",
-        ]}
       />
     </div>
   );

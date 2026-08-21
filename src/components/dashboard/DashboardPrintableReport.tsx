@@ -12,7 +12,7 @@ function periodLabel(period: Period): string {
 
 /** Clean, black-on-white report layout shown only when printing (window.print → PDF). */
 export function DashboardPrintableReport({ strategists, period }: { strategists: Strategist[]; period: Period }) {
-  const { jiraDeadlines } = useDashboardFilters();
+  const { jiraDeadlines, bitacorasSync } = useDashboardFilters();
   const { recordsByStrategist } = useStrategistRecords();
   const generatedAt = new Date().toLocaleString("es-MX", {
     day: "2-digit",
@@ -36,14 +36,15 @@ export function DashboardPrintableReport({ strategists, period }: { strategists:
       </div>
 
       <p style={{ fontSize: 9.5, color: "#777", marginBottom: 12 }}>
-        Todos los datos de este reporte son reales: deadlines vienen de Jira; el resto se carga manualmente en la sección Admin.
-        Un campo sin dato muestra &quot;{NO_DATA}&quot;.
+        Todos los datos de este reporte son reales: deadlines vienen de Jira, bitácoras de Google Sheets; el resto se carga
+        manualmente en la sección Admin. Un campo sin dato muestra &quot;{NO_DATA}&quot;.
       </p>
 
       {strategists.map((s, i) => {
         const manualByMonth = recordsByStrategist[s.id] ?? {};
         const deadlinesByMonth = jiraDeadlines?.configured && !jiraDeadlines.error ? jiraDeadlines.byEmail[s.email] ?? null : null;
-        const r = getEffectiveRecord(manualByMonth, deadlinesByMonth, period);
+        const bitacorasByMonth = bitacorasSync?.configured && !bitacorasSync.error ? bitacorasSync.byStrategistId[s.id] ?? null : null;
+        const r = getEffectiveRecord(manualByMonth, deadlinesByMonth, period, bitacorasByMonth);
         const deadlineText =
           r.deadlineComplianceRate !== null
             ? `${r.deadlineComplianceRate}% (${r.deadlinesOnTime}/${r.deadlinesAssigned})`
@@ -62,15 +63,12 @@ export function DashboardPrintableReport({ strategists, period }: { strategists:
               <div>OKR: <strong>{r.okrCompletion !== null ? `${r.okrCompletion}%` : NO_DATA}</strong> · KPI: <strong>{r.kpiCompliance !== null ? `${r.kpiCompliance}%` : NO_DATA}</strong></div>
               <div>Deadlines (Jira): <strong>{deadlineText}</strong></div>
               <div>
-                Bitácoras: <strong>{r.bitacoraComplianceRate !== null ? `${r.bitacoraComplianceRate}%` : NO_DATA}</strong>
+                Bitácoras (Sheets): <strong>{r.bitacoraComplianceRate !== null ? `${r.bitacoraComplianceRate}%` : NO_DATA}</strong>
                 {r.bitacorasExpected !== null ? ` (${r.bitacorasSubmitted}/${r.bitacorasExpected})` : ""}
               </div>
               <div>Última bitácora: {r.lastBitacoraDate ?? "—"}</div>
               <div>Calificación QA: <strong>{r.qaScore !== null ? `${r.qaScore}%` : NO_DATA}</strong>{r.qaIssuesFound !== null ? ` (${r.qaIssuesFound} hallazgos)` : ""}</div>
-              <div>
-                NPS cliente: <strong>{r.npsScore !== null ? r.npsScore : NO_DATA}</strong>
-                {r.npsResponses !== null ? ` (${r.npsPromoters}P / ${r.npsPassives}Pa / ${r.npsDetractors}D)` : ""}
-              </div>
+              <div>NPS cliente: <strong>{r.npsScore !== null ? r.npsScore : NO_DATA}</strong></div>
             </div>
             {r.okrs.length > 0 && (
               <div style={{ fontSize: 10.5, marginTop: 6 }}>

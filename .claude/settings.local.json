@@ -90,7 +90,10 @@
       "Bash(sed -i '' 's/QuarterDeadlineCount/MonthDeadlineCount/g' src/lib/dashboardFilters.tsx src/components/dashboard/tabs/DeadlinesTab.tsx)",
       "Bash(sed -i '' 's/no solo a la fecha final del trimestre\\\\./no solo a la fecha final del periodo./' src/components/dashboard/tabs/OkrKpiTab.tsx)",
       "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" http://localhost:3000/)",
-      "Bash(pkill -f \"next dev\")"
+      "Bash(pkill -f \"next dev\")",
+      "mcp__claude-in-chrome__navigate",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" http://localhost:3000/dashboard-estrategas)",
+      "Bash(jobs)"
     ]
   }
 }

@@ -108,11 +108,6 @@ export function PeerReviewsTab() {
 
       <InsightPanel
         alerts={lowScore.map((x) => ({ text: `${x.s.name} recibió ${x.r.peerReviewScore}% de sus pares — por debajo de ${LOW_SCORE_THRESHOLD}%.` }))}
-        tips={[
-          "Cierra el ciclo compartiendo retroalimentación agregada y anónima con cada estratega.",
-          "Si un comentario constructivo se repite entre varios pares, conviértelo en un plan de acción formal.",
-          "Alterna revisores entre proyectos para reducir sesgos de familiaridad en las evaluaciones.",
-        ]}
         comments={allComments.slice(0, 6).map((c) => ({ author: `${c.strategist} · ${c.from}`, text: c.comment }))}
       />
     </div>

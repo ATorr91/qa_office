@@ -123,11 +123,6 @@ export function OkrKpiTab() {
         alerts={needsAttention
           .filter((o) => o.status === "off-track")
           .map((o) => ({ text: `"${o.objective}" (${o.strategist}) está fuera de curso con ${o.progress}% de avance.` }))}
-        tips={[
-          "Revisa en el check-in semanal los OKRs en riesgo antes de que pasen a fuera de curso.",
-          "Un KPI incumplido de forma recurrente suele señalar un problema de capacidad, no de esfuerzo.",
-          "Vincula cada Key Result a una fecha de checkpoint intermedio, no solo a la fecha final del periodo.",
-        ]}
       />
     </div>
   );
