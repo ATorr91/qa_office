@@ -21,12 +21,22 @@ export interface MonthDeadlineCount {
 
 export type DeadlinesByEmail = Record<string, Record<MonthKey, MonthDeadlineCount>>;
 
+export interface IssueStatusCount {
+  total: number;
+  done: number;
+  inProgress: number;
+  todo: number;
+}
+
+export type IssueStatusByEmail = Record<string, IssueStatusCount>;
+
 export interface JiraDeadlinesResponse {
   configured: boolean;
   error: string | null;
   fetchedAt: string;
   boardUrl: string | null;
   byEmail: DeadlinesByEmail;
+  issueStatusByEmail: IssueStatusByEmail;
   unconfiguredEmails: string[];
 }
 
@@ -101,6 +111,7 @@ export function DashboardFiltersProvider({ children }: { children: ReactNode }) 
             fetchedAt: new Date(0).toISOString(),
             boardUrl: null,
             byEmail: {},
+            issueStatusByEmail: {},
             unconfiguredEmails: [],
           });
         }

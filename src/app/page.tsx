@@ -70,6 +70,23 @@ const DESTINATIONS = [
       />
     ),
   },
+  {
+    href: "/mapa-valor-servicios",
+    title: "Mapa de Valor de Servicios",
+    description:
+      "Matriz de trazabilidad BUILD, FutureProof y Agentic: qué promete cada servicio, qué tan comprobado está por proyecto y dónde están las brechas.",
+    accent: "var(--bp-cyan)",
+    icon: (
+      <path
+        d="M4 6h16M4 6v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V6M4 6l2-3h12l2 3M9 11h6M9 15h6"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    ),
+  },
 ];
 
 export default function HomePage() {

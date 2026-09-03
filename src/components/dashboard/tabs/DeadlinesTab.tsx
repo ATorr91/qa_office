@@ -23,6 +23,10 @@ function rate(onTime: number, assigned: number): number {
   return assigned > 0 ? Math.round((onTime / assigned) * 100) : 0;
 }
 
+function pct(count: number, total: number): number {
+  return total > 0 ? Math.round((count / total) * 100) : 0;
+}
+
 function sumMonths(byEmail: ByEmail, email: string, months: MonthKey[]): MonthDeadlineCount {
   const rec = byEmail[email];
   if (!rec) return { assigned: 0, onTime: 0 };
@@ -87,7 +91,14 @@ export function DeadlinesTab() {
     .map((s) => {
       const c = sumMonths(data.byEmail, s.email, monthsForCurrentPeriod);
       const boardConfigured = !data.unconfiguredEmails?.includes(s.email);
-      return { s, assigned: c.assigned, onTime: c.onTime, complianceRate: rate(c.onTime, c.assigned), boardConfigured };
+      return {
+        s,
+        assigned: c.assigned,
+        onTime: c.onTime,
+        complianceRate: rate(c.onTime, c.assigned),
+        boardConfigured,
+        statusCount: data.issueStatusByEmail[s.email],
+      };
     })
     .sort((a, b) => b.complianceRate - a.complianceRate);
 
@@ -179,24 +190,28 @@ export function DeadlinesTab() {
       </div>
 
       <div className="overflow-x-auto rounded-[var(--bp-radius-md)] border border-[var(--bp-border)]">
-        <table className="w-full min-w-[560px] border-collapse text-left text-[12px]">
+        <table className="w-full min-w-[860px] border-collapse text-left text-[12px]">
           <thead>
             <tr className="border-b border-[var(--bp-border)] bg-[var(--bp-surface-alt)] text-[10px] uppercase tracking-[0.04em] text-[var(--bp-ink-soft)]">
               <th className="px-3 py-2">Estratega</th>
               <th className="px-3 py-2 text-right">A tiempo</th>
               <th className="px-3 py-2 text-right">Asignados</th>
               <th className="px-3 py-2 text-right">Cumplimiento</th>
+              <th className="px-3 py-2 text-right">Total incidencias</th>
+              <th className="px-3 py-2 text-right">En curso / revisión</th>
+              <th className="px-3 py-2 text-right">Por hacer</th>
+              <th className="px-3 py-2 text-right">% Finalizadas</th>
             </tr>
           </thead>
           <tbody>
-            {rows.every((r) => r.assigned === 0) ? (
+            {rows.every((r) => r.assigned === 0 && (!r.statusCount || r.statusCount.total === 0)) ? (
               <tr>
-                <td colSpan={4} className="px-3 py-6 text-center text-[12px] text-[var(--bp-ink-soft)]">
-                  Aún no hay tickets con fecha de vencimiento vencida para este periodo en los tableros de Jira conectados.
+                <td colSpan={8} className="px-3 py-6 text-center text-[12px] text-[var(--bp-ink-soft)]">
+                  Aún no hay incidencias en los tableros de Jira conectados para este periodo.
                 </td>
               </tr>
             ) : (
-              rows.map(({ s, assigned, onTime, complianceRate, boardConfigured }, i) => (
+              rows.map(({ s, assigned, onTime, complianceRate, boardConfigured, statusCount }, i) => (
                 <tr key={s.id} className="bp-row-in border-b border-[var(--bp-border)] last:border-0" style={{ animationDelay: `${Math.min(i, 12) * 25}ms` }}>
                   <td className="px-3 py-2.5">
                     <StrategistAvatar strategist={s} />
@@ -212,6 +227,29 @@ export function DeadlinesTab() {
                       "—"
                     )}
                   </td>
+                  {!boardConfigured ? (
+                    <td colSpan={4} className="px-3 py-2.5 text-right text-[11px] text-[var(--bp-ink-soft)]">
+                      Sin tablero
+                    </td>
+                  ) : !statusCount || statusCount.total === 0 ? (
+                    <td colSpan={4} className="px-3 py-2.5 text-right text-[11px] text-[var(--bp-ink-soft)]">
+                      Sin incidencias registradas
+                    </td>
+                  ) : (
+                    <>
+                      <td className="px-3 py-2.5 text-right font-mono">{statusCount.total}</td>
+                      <td className="px-3 py-2.5 text-right font-mono">
+                        {statusCount.inProgress} <span className="text-[11px] text-[var(--bp-ink-soft)]">({pct(statusCount.inProgress, statusCount.total)}%)</span>
+                      </td>
+                      <td className="px-3 py-2.5 text-right font-mono">
+                        {statusCount.todo} <span className="text-[11px] text-[var(--bp-ink-soft)]">({pct(statusCount.todo, statusCount.total)}%)</span>
+                      </td>
+                      <td className="px-3 py-2.5 text-right">
+                        <span className="font-mono text-[15px] font-bold text-[var(--bp-green)]">{pct(statusCount.done, statusCount.total)}%</span>
+                        <span className="ml-1 text-[11px] text-[var(--bp-ink-soft)]">({statusCount.done}/{statusCount.total})</span>
+                      </td>
+                    </>
+                  )}
                 </tr>
               ))
             )}

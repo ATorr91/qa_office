@@ -11,12 +11,23 @@ export interface MonthDeadlineCount {
 
 export type DeadlinesByEmail = Record<string, Record<MonthKey, MonthDeadlineCount>>;
 
+export interface IssueStatusCount {
+  total: number;
+  done: number;
+  inProgress: number;
+  todo: number;
+}
+
+export type IssueStatusByEmail = Record<string, IssueStatusCount>;
+
 export interface JiraDeadlinesResult {
   configured: boolean;
   error: string | null;
   fetchedAt: string;
   boardUrl: string | null;
   byEmail: DeadlinesByEmail;
+  /** All issues assigned to each strategist on their board, by status — regardless of due date. */
+  issueStatusByEmail: IssueStatusByEmail;
   /** Strategists with no Jira project key configured (no per-person override, no global fallback) — not an error, just not wired up yet. */
   unconfiguredEmails: string[];
 }
@@ -27,10 +38,10 @@ interface JiraCreds {
   apiToken: string;
 }
 
-/** One strategist's email plus the Jira project key their own board lives in. */
+/** One strategist's email plus the Jira project key(s) their boards live in — issues across all of them are merged together. */
 export interface StrategistBoard {
   email: string;
-  projectKey: string;
+  projectKeys: string[];
 }
 
 function readCreds(): JiraCreds | null {
@@ -102,7 +113,7 @@ interface JiraSearchPage {
 // this token-based POST endpoint. See https://developer.atlassian.com/changelog/#CHANGE-2046.
 async function fetchAllIssues(creds: JiraCreds, projectKey: string, accountIds: string[]): Promise<JiraIssue[]> {
   if (accountIds.length === 0) return [];
-  const jql = `project = "${projectKey}" AND assignee in (${accountIds.map((id) => `"${id}"`).join(",")}) AND duedate is not EMPTY ORDER BY duedate ASC`;
+  const jql = `project = "${projectKey}" AND assignee in (${accountIds.map((id) => `"${id}"`).join(",")}) ORDER BY duedate ASC`;
   const issues: JiraIssue[] = [];
   let nextPageToken: string | undefined;
   for (;;) {
@@ -121,49 +132,72 @@ async function fetchAllIssues(creds: JiraCreds, projectKey: string, accountIds: 
 
 /**
  * Fetches deadline compliance per strategist from Jira, bucketed by month. Each strategist can
- * have their own board (project key) — `boards` groups strategists by project so people who
- * share a board are queried together, and people with no project key configured are skipped
- * (returned in `unconfiguredEmails`, not treated as an error).
+ * have one or more boards (project keys) — issues from all of a strategist's projects are merged
+ * together into their totals. `boards` is regrouped by project key so people who share a project
+ * are queried together, and people with no project key configured are skipped (returned in
+ * `unconfiguredEmails`, not treated as an error).
  */
 export async function fetchJiraDeadlines(boards: StrategistBoard[]): Promise<JiraDeadlinesResult> {
   const fetchedAt = new Date().toISOString();
   const byEmail: DeadlinesByEmail = {};
-  for (const b of boards) byEmail[b.email] = {};
+  const issueStatusByEmail: IssueStatusByEmail = {};
+  for (const b of boards) {
+    byEmail[b.email] = {};
+    issueStatusByEmail[b.email] = { total: 0, done: 0, inProgress: 0, todo: 0 };
+  }
 
-  const configuredBoards = boards.filter((b) => b.projectKey.trim() !== "");
-  const unconfiguredEmails = boards.filter((b) => b.projectKey.trim() === "").map((b) => b.email);
+  const configuredBoards = boards.filter((b) => b.projectKeys.length > 0);
+  const unconfiguredEmails = boards.filter((b) => b.projectKeys.length === 0).map((b) => b.email);
 
   const creds = readCreds();
   if (!creds) {
-    return { configured: false, error: null, fetchedAt, boardUrl: null, byEmail, unconfiguredEmails };
+    return { configured: false, error: null, fetchedAt, boardUrl: null, byEmail, issueStatusByEmail, unconfiguredEmails };
   }
   if (configuredBoards.length === 0) {
-    return { configured: true, error: null, fetchedAt, boardUrl: null, byEmail, unconfiguredEmails };
+    return { configured: true, error: null, fetchedAt, boardUrl: null, byEmail, issueStatusByEmail, unconfiguredEmails };
   }
 
-  const byProjectKey = new Map<string, string[]>();
-  for (const b of configuredBoards) {
-    byProjectKey.set(b.projectKey, [...(byProjectKey.get(b.projectKey) ?? []), b.email]);
-  }
-  const boardUrl = `${creds.baseUrl}/jira/software/projects/${configuredBoards[0].projectKey}/boards`;
+  const boardUrl = `${creds.baseUrl}/jira/software/projects/${configuredBoards[0].projectKeys[0]}/boards`;
 
   try {
     const today = Date.now();
 
+    // Resolve every configured strategist's Jira accountId once, then group by project key so a
+    // strategist listed on several projects gets queried (and merged) across all of them.
+    const emailByAccountId = await resolveAccountIds(creds, configuredBoards.map((b) => b.email));
+    const accountIdByEmail = new Map([...emailByAccountId.entries()].map(([accountId, email]) => [email, accountId]));
+
+    const byProjectKey = new Map<string, string[]>();
+    for (const b of configuredBoards) {
+      const accountId = accountIdByEmail.get(b.email);
+      if (!accountId) continue;
+      for (const projectKey of b.projectKeys) {
+        byProjectKey.set(projectKey, [...(byProjectKey.get(projectKey) ?? []), accountId]);
+      }
+    }
+
     await Promise.all(
-      [...byProjectKey.entries()].map(async ([projectKey, emails]) => {
-        const emailByAccountId = await resolveAccountIds(creds, emails);
-        const issues = await fetchAllIssues(creds, projectKey, [...emailByAccountId.keys()]);
+      [...byProjectKey.entries()].map(async ([projectKey, accountIds]) => {
+        const issues = await fetchAllIssues(creds, projectKey, accountIds);
 
         for (const issue of issues) {
           const accountId = issue.fields.assignee?.accountId;
-          const dueDate = issue.fields.duedate;
-          if (!accountId || !dueDate) continue;
+          if (!accountId) continue;
           const email = emailByAccountId.get(accountId);
           if (!email) continue;
 
+          const statusKey = issue.fields.status.statusCategory.key;
+          const statusBucket = issueStatusByEmail[email];
+          statusBucket.total += 1;
+          if (statusKey === "done") statusBucket.done += 1;
+          else if (statusKey === "indeterminate") statusBucket.inProgress += 1;
+          else statusBucket.todo += 1;
+
+          const dueDate = issue.fields.duedate;
+          if (!dueDate) continue;
+
           const month = monthFromDate(dueDate);
-          const isDone = issue.fields.status.statusCategory.key === "done";
+          const isDone = statusKey === "done";
           const dueMs = new Date(`${dueDate}T00:00:00`).getTime();
           const bucket = (byEmail[email][month] ??= { assigned: 0, onTime: 0 });
 
@@ -181,7 +215,7 @@ export async function fetchJiraDeadlines(boards: StrategistBoard[]): Promise<Jir
       }),
     );
 
-    return { configured: true, error: null, fetchedAt, boardUrl, byEmail, unconfiguredEmails };
+    return { configured: true, error: null, fetchedAt, boardUrl, byEmail, issueStatusByEmail, unconfiguredEmails };
   } catch (err) {
     return {
       configured: true,
@@ -189,6 +223,7 @@ export async function fetchJiraDeadlines(boards: StrategistBoard[]): Promise<Jir
       fetchedAt,
       boardUrl,
       byEmail,
+      issueStatusByEmail,
       unconfiguredEmails,
     };
   }

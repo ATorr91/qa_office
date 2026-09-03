@@ -246,19 +246,20 @@ export function AdminDataForm() {
         </div>
       </div>
 
-      <Section title="Tablero de Jira de este estratega">
+      <Section title="Tableros de Jira de este estratega">
         <p className="text-[12px] text-[var(--bp-ink-soft)]">
-          Cada estratega puede tener su propio tablero/proyecto de Jira. Escribe la clave del proyecto (ej. <code>APAC</code>) tal
-          como aparece en la URL de su tablero. Si lo dejas vacío, se usa el proyecto global configurado en el servidor (si existe).
+          Cada estratega puede trabajar en varios proyectos de Jira a la vez. Escribe las claves de sus proyectos separadas por coma
+          (ej. <code>APAC, MKT, OPS</code>) tal como aparecen en la URL de cada tablero — sus incidencias se juntan en un solo total.
+          Si lo dejas vacío, se usa el proyecto global configurado en el servidor (si existe).
         </p>
         <div className="flex flex-wrap items-end gap-3">
           <div className="flex flex-col gap-1">
-            <label className="text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--bp-ink-soft)]">Project key de Jira</label>
-            <input value={boardKey} onChange={(e) => setBoardKey(e.target.value)} placeholder="ej. APAC" className={`${INPUT_CLASS} sm:w-56`} />
+            <label className="text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--bp-ink-soft)]">Project keys de Jira</label>
+            <input value={boardKey} onChange={(e) => setBoardKey(e.target.value)} placeholder="ej. APAC, MKT, OPS" className={`${INPUT_CLASS} sm:w-72`} />
           </div>
           {boardSavedAt && <span className="text-[12px] font-medium text-[var(--bp-green)]">Guardado ✓</span>}
           <Button kind="outline" size="sm" onClick={handleSaveBoard}>
-            Guardar tablero
+            Guardar tableros
           </Button>
         </div>
       </Section>

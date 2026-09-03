@@ -1,0 +1,688 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Mapa de Valor: Servicios Strategist</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap');
+
+  :root{
+    --bg-a:#060814;
+    --bg-b:#10173c;
+    --bg-c:#1b2568;
+    --bg-d:#2a3480;
+    --surface:rgba(255,255,255,.05);
+    --surface-2:rgba(255,255,255,.08);
+    --border:rgba(255,255,255,.14);
+    --text:#F3F5FF;
+    --text-dim:#A7AFD9;
+    --teal:#2DC9D8;
+    --purple:#9B7FE8;
+    --build:#E0B24C;
+    --futureproof:#2DC9D8;
+    --agentic:#9B7FE8;
+    --comprobado:#4FBE8C;
+    --modelado:#5B8DEF;
+    --supuesto:#C4715B;
+    --pendiente:#6B72A8;
+    --alerta:#E0955B;
+    --nocumple:#E06A6A;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{
+    background:
+      radial-gradient(1100px 750px at 88% 92%, rgba(45,201,216,.12), transparent 60%),
+      radial-gradient(850px 650px at 92% 12%, rgba(155,127,232,.12), transparent 55%),
+      linear-gradient(135deg, var(--bg-a) 0%, var(--bg-b) 40%, var(--bg-c) 75%, var(--bg-d) 100%);
+    background-attachment:fixed;
+    color:var(--text);
+    font-family:'Inter', sans-serif;
+    line-height:1.5;
+    padding:48px 24px 96px;
+    position:relative;
+  }
+  body::before{
+    content:"";
+    position:fixed; top:-220px; right:-220px;
+    width:900px; height:900px;
+    border:1px dashed rgba(255,255,255,.12);
+    border-radius:50%;
+    pointer-events:none;
+    z-index:0;
+  }
+  .wrap{max-width:1180px; margin:0 auto; position:relative; z-index:1;}
+
+  header{
+    margin-bottom:32px; border-bottom:1px solid var(--border); padding-bottom:32px;
+    display:flex; justify-content:space-between; align-items:flex-start; gap:24px; flex-wrap:wrap;
+  }
+  header .eyebrow{font-size:13px; color:var(--text-dim); font-weight:500; margin-bottom:10px;}
+  h1{
+    font-family:'Poppins', sans-serif;
+    font-weight:700;
+    font-size:32px;
+    letter-spacing:-0.01em;
+    margin-bottom:12px;
+    max-width:680px;
+  }
+  header p{color:var(--text-dim); font-size:15px; max-width:640px;}
+  header .source-note{font-size:12.5px; color:var(--alerta); margin-top:14px; font-weight:600;}
+  .logo-mark{
+    display:flex; align-items:center; gap:8px; flex-shrink:0;
+    font-family:'Inter', sans-serif; font-size:15px; letter-spacing:.03em; color:var(--text);
+    white-space:nowrap;
+  }
+  .logo-mark .logo-sq{width:14px; height:14px; background:var(--teal); border-radius:3px; flex-shrink:0;}
+  .logo-mark b{font-weight:700;}
+  .logo-mark span.thin{font-weight:400; color:var(--text-dim);}
+
+  .legend{
+    display:flex; gap:20px; flex-wrap:wrap;
+    margin:28px 0 0;
+    padding:16px 20px;
+    background:var(--surface);
+    border:1px solid var(--border);
+    border-radius:14px;
+    backdrop-filter:blur(10px);
+  }
+  .legend-item{display:flex; align-items:center; gap:8px; font-size:13px; color:var(--text-dim);}
+  .dot{width:9px; height:9px; border-radius:50%; flex-shrink:0;}
+
+  .alert-banner{
+    margin:16px 0 48px;
+    background:rgba(224,149,91,.07);
+    border:1px solid rgba(224,149,91,.35);
+    border-left:3px solid var(--alerta);
+    border-radius:10px;
+    padding:18px 22px;
+  }
+  .alert-banner .alert-head{font-size:12.5px; font-weight:700; color:var(--alerta); text-transform:uppercase; letter-spacing:.03em; margin-bottom:10px;}
+  .alert-banner ul{list-style:none; display:flex; flex-direction:column; gap:10px;}
+  .alert-banner li{font-size:13.5px; color:var(--text); padding-left:16px; position:relative;}
+  .alert-banner li::before{content:"⚠"; position:absolute; left:0; color:var(--alerta); font-size:12px;}
+  .alert-banner li b{color:var(--text);}
+  .alert-banner .cite{color:var(--text-dim); font-size:12px;}
+
+  section{margin-bottom:64px;}
+  .section-head{margin-bottom:20px;}
+  .section-head .tag{
+    display:inline-flex; align-items:center;
+    font-size:11px; color:var(--teal); font-weight:700; text-transform:uppercase; letter-spacing:.04em;
+    background:rgba(45,201,216,.12); border:1px solid rgba(45,201,216,.35);
+    padding:4px 12px; border-radius:20px;
+  }
+  .section-head h2{font-family:'Poppins', sans-serif; font-weight:700; font-size:22px; margin-top:10px;}
+  .section-head p{color:var(--text-dim); font-size:14px; margin-top:6px; max-width:700px;}
+  .section-head .subnote{font-size:12.5px; color:var(--alerta); margin-top:8px; max-width:700px;}
+
+  /* ---- Matriz ---- */
+  .matrix-scroll{overflow-x:auto; border:1px solid var(--border); border-radius:14px; backdrop-filter:blur(10px);}
+  table{border-collapse:collapse; width:100%; min-width:920px;}
+  th, td{padding:14px 16px; text-align:left; font-size:13.5px; border-bottom:1px solid var(--border);}
+  thead th{
+    background:var(--surface-2);
+    color:var(--text-dim);
+    font-weight:600;
+    font-size:12.5px;
+    white-space:nowrap;
+    position:sticky; top:0;
+  }
+  tbody th{
+    background:var(--surface);
+    font-weight:600;
+    white-space:nowrap;
+    position:sticky; left:0;
+  }
+  tbody th .accent{display:inline-block; width:7px; height:7px; border-radius:50%; margin-right:8px;}
+  tbody td{background:var(--surface); color:var(--text-dim); text-align:center;}
+  .pending{color:var(--pendiente); font-size:16px;}
+  .na{color:var(--text-dim); font-size:11px; font-style:italic; opacity:.55;}
+  tbody tr.quality-row th{
+    font-weight:500; font-size:11.5px; color:var(--text-dim);
+    padding-left:30px; background:var(--surface-2);
+  }
+  tbody tr.quality-row td{background:var(--surface-2); font-size:11px;}
+  tbody tr.quality-row .metric-status{
+    display:block; margin-top:2px; font-size:10.5px; color:var(--alerta); font-weight:400;
+  }
+
+  /* ---- Auditoría de brechas ---- */
+  .rubric{display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:24px;}
+  .rubric-box{border:1px solid var(--border); background:var(--surface); border-radius:14px; padding:18px 20px; backdrop-filter:blur(10px);}
+  .rubric-box .rubric-title{font-size:13px; font-weight:700; margin-bottom:12px;}
+  .rubric-box ol, .rubric-box ul{list-style:none; display:flex; flex-direction:column; gap:8px;}
+  .rubric-box li{font-size:12.5px; color:var(--text-dim); display:flex; justify-content:space-between; gap:12px; border-bottom:1px solid var(--border); padding-bottom:8px;}
+  .rubric-box li:last-child{border-bottom:none; padding-bottom:0;}
+  .rubric-box li .k{color:var(--text); flex-shrink:0;}
+
+  .quad-wrap{display:flex; gap:10px; margin-bottom:8px;}
+  .quad-yaxis{
+    writing-mode:vertical-rl; transform:rotate(180deg);
+    font-size:11.5px; color:var(--text-dim); font-weight:600;
+    display:flex; align-items:center; justify-content:space-between;
+    padding:6px 0; flex-shrink:0;
+  }
+  .quad-grid{
+    flex:1; display:grid; grid-template-columns:1fr 1fr; grid-template-rows:1fr 1fr;
+    gap:10px; min-height:420px;
+  }
+  .quad-cell{
+    border-radius:14px; border:1px solid var(--border); padding:14px;
+    display:flex; flex-direction:column; gap:10px;
+    backdrop-filter:blur(10px);
+  }
+  .quad-cell .quad-label{font-size:12.5px; font-weight:700;}
+  .quad-cell .quad-desc{font-size:11px; color:var(--text-dim); margin-top:-6px;}
+  .quad-chips{display:flex; flex-wrap:wrap; gap:6px; margin-top:4px;}
+  .chip{
+    font-size:11px; padding:5px 9px; border-radius:6px; background:var(--surface-2);
+    border:1px solid var(--border); color:var(--text-dim); display:flex; align-items:center; gap:6px;
+  }
+  .chip .cdot{width:6px; height:6px; border-radius:50%; flex-shrink:0;}
+  .quad-actuar{background:rgba(196,113,91,.08); border-color:rgba(196,113,91,.4);}
+  .quad-actuar .quad-label{color:var(--supuesto);}
+  .quad-vigilar{background:rgba(224,149,91,.07); border-color:rgba(224,149,91,.35);}
+  .quad-vigilar .quad-label{color:var(--alerta);}
+  .quad-programar{background:rgba(91,141,239,.07); border-color:rgba(91,141,239,.3);}
+  .quad-programar .quad-label{color:var(--modelado);}
+  .quad-bajo{background:rgba(79,190,140,.07); border-color:rgba(79,190,140,.3);}
+  .quad-bajo .quad-label{color:var(--comprobado);}
+  .quad-xaxis{display:flex; justify-content:space-between; font-size:11.5px; color:var(--text-dim); font-weight:600; padding:0 4px;}
+  .quad-example-note{font-size:12px; color:var(--text-dim); margin-top:16px;}
+
+  @media (max-width: 900px){
+    .rubric{grid-template-columns:1fr;}
+  }
+  tr:last-child td, tr:last-child th{border-bottom:none;}
+
+  .demo-row{margin-top:14px; display:flex; align-items:center; gap:12px; font-size:12.5px; color:var(--text-dim); padding:0 4px; flex-wrap:wrap;}
+  .pill{
+    display:inline-flex; align-items:center; gap:6px;
+    padding:4px 10px; border-radius:20px;
+    font-size:12px; font-weight:600;
+    white-space:nowrap;
+  }
+  .pill .dot{width:6px; height:6px;}
+  .pill.comprobado{background:rgba(79,190,140,.12); color:var(--comprobado);}
+  .pill.modelado{background:rgba(91,141,239,.12); color:var(--modelado);}
+  .pill.supuesto{background:rgba(196,113,91,.12); color:var(--supuesto);}
+  .pill.alerta{background:transparent; border:1px solid var(--alerta); color:var(--alerta);}
+  .pill.cumple{background:rgba(79,190,140,.12); color:var(--comprobado);}
+  .pill.cumpleparcial{background:rgba(91,141,239,.12); color:var(--modelado);}
+  .pill.nocumple{background:rgba(217,83,79,.14); color:var(--nocumple);}
+  .pill.meta{background:rgba(58,70,88,.5); color:var(--text-dim); border:1px solid var(--border);}
+
+  .evidence-tiers{display:flex; gap:14px; margin-top:14px; flex-wrap:wrap;}
+  .tier-chip{font-size:12px; color:var(--text-dim); border:1px dashed var(--border); border-radius:8px; padding:8px 12px; max-width:320px;}
+  .tier-chip b{color:var(--text);}
+
+  /* ---- Canvas por servicio ---- */
+  .canvas-card{
+    position:relative;
+    border:1px solid var(--border);
+    background:var(--surface);
+    backdrop-filter:blur(10px);
+    border-radius:16px;
+    padding:28px 24px 20px;
+    margin-bottom:20px;
+    overflow:hidden;
+  }
+  .canvas-card::before{
+    content:"";
+    position:absolute; top:0; left:0; right:0; height:4px;
+    background:linear-gradient(90deg, var(--accent), transparent 160%);
+  }
+  .canvas-card .card-top{display:flex; align-items:baseline; justify-content:space-between; flex-wrap:wrap; gap:10px; margin-bottom:2px;}
+  .canvas-card .service-name{
+    font-family:'Poppins', sans-serif;
+    font-size:19px;
+    font-weight:700;
+  }
+  .canvas-card .service-sub{font-size:12.5px; color:var(--accent); font-weight:600; text-transform:uppercase; letter-spacing:.03em; margin-bottom:16px;}
+  .canvas-grid{display:grid; grid-template-columns:repeat(5, 1fr); gap:18px;}
+  .canvas-field .field-label{font-size:11.5px; color:var(--text-dim); text-transform:uppercase; letter-spacing:.03em; font-weight:600; margin-bottom:8px;}
+  .canvas-field .field-body{font-size:13.5px; color:var(--text); line-height:1.55;}
+  .canvas-field.result{border-left:1px solid var(--border); padding-left:18px;}
+  .evidence-line{margin-top:12px; font-size:12px; color:var(--text-dim);}
+  .evidence-line .fill{
+    color:var(--text-dim); border-bottom:1px dashed var(--border); padding-bottom:1px;
+  }
+  .field-flag{
+    margin-top:10px; font-size:12px; color:var(--alerta);
+    background:rgba(224,149,91,.08); border:1px solid rgba(224,149,91,.3);
+    border-radius:6px; padding:9px 11px; line-height:1.5;
+  }
+  .field-flag .flag-source{display:block; margin-top:4px; color:var(--text-dim); font-size:11px;}
+
+  .ownership{
+    margin-top:18px; padding-top:14px; border-top:1px solid var(--border);
+    display:flex; gap:32px; flex-wrap:wrap; font-size:12.5px; color:var(--text-dim);
+  }
+  .ownership .fill{border-bottom:1px dashed var(--border); padding-bottom:1px; color:var(--text-dim);}
+  .ownership .note{width:100%; font-size:11.5px; color:var(--alerta); margin-top:2px;}
+
+  .service-build{--accent:var(--build);}
+  .service-fp{--accent:var(--futureproof);}
+  .service-agentic{--accent:var(--agentic);}
+
+  @media (max-width: 900px){
+    .canvas-grid{grid-template-columns:1fr;}
+    .canvas-field.result{border-left:none; padding-left:0; border-top:1px solid var(--border); padding-top:14px;}
+  }
+
+  /* ---- Campos editables ---- */
+  [contenteditable="true"]{
+    outline:none; cursor:text; border-radius:4px;
+  }
+  span.fill[contenteditable="true"]{ border-bottom:1px dashed var(--border); padding:0 2px; }
+  span.fill[contenteditable="true"]:hover{ border-bottom-color:var(--text-dim); }
+  span.fill[contenteditable="true"]:focus{ border-bottom-color:var(--modelado); background:rgba(91,141,239,.08); }
+  td[contenteditable="true"]{ transition:background .1s; }
+  td[contenteditable="true"]:hover{ background:rgba(255,255,255,.03); }
+  td[contenteditable="true"]:focus{ background:rgba(91,141,239,.08); box-shadow:inset 0 0 0 1px var(--modelado); }
+  .quad-chips[contenteditable="true"]{ min-height:26px; border:1px dashed transparent; }
+  .quad-chips[contenteditable="true"]:hover{ border-color:var(--border); }
+  .quad-chips[contenteditable="true"]:focus{ border-color:var(--modelado); background:rgba(91,141,239,.06); }
+  .quad-chips[contenteditable="true"]:empty:before{ content:"Escribe aquí: Servicio · Proyecto · causa"; color:var(--text-dim); opacity:.4; font-size:11px; }
+
+  /* ---- Checklist (cause-legend, check-block) ---- */
+  .cause-legend{display:flex; flex-wrap:wrap; gap:8px; margin-bottom:20px;}
+  .cause-chip{
+    font-size:11.5px; color:var(--text-dim); background:var(--surface-2);
+    border:1px solid var(--border); border-radius:20px; padding:5px 12px;
+  }
+  .cause-chip b{color:var(--text); margin-right:4px;}
+
+  .check-block{
+    position:relative; overflow:hidden;
+    border:1px solid var(--border); background:var(--surface); backdrop-filter:blur(10px);
+    border-radius:16px; padding:22px 22px 18px; margin-bottom:20px;
+  }
+  .check-block::before{
+    content:""; position:absolute; top:0; left:0; right:0; height:4px;
+    background:linear-gradient(90deg, var(--accent, var(--teal)), transparent 160%);
+  }
+  .check-head{display:flex; align-items:center; gap:10px; margin-bottom:14px;}
+  .check-head .accent-dot{width:10px; height:10px; border-radius:50%; flex-shrink:0;}
+  .check-head .service-name{font-family:'Poppins', sans-serif; font-weight:700; font-size:18px;}
+  .check-note{
+    font-size:12px; color:var(--alerta); background:rgba(224,149,91,.08);
+    border:1px solid rgba(224,149,91,.3); border-radius:8px; padding:9px 11px; margin-bottom:14px;
+  }
+  .check-meta{display:flex; gap:24px; flex-wrap:wrap; font-size:12.5px; color:var(--text-dim); margin-bottom:16px;}
+  .check-table{width:100%; border-collapse:collapse; font-size:12.5px;}
+  .check-table th{
+    text-align:left; font-size:11px; color:var(--text-dim); text-transform:uppercase; letter-spacing:.03em;
+    padding:8px 10px; border-bottom:1px solid var(--border);
+  }
+  .check-table td{padding:10px; border-bottom:1px solid var(--border); vertical-align:top; color:var(--text);}
+  .check-table td.crit{color:var(--text-dim); font-size:12px;}
+  .check-table tr:last-child td{border-bottom:none;}
+
+  select.cell-select{
+    background:var(--surface-2); color:var(--text-dim); border:1px solid var(--border);
+    border-radius:6px; font-family:'Inter', sans-serif; font-size:12px; padding:4px 6px;
+    width:100%; cursor:pointer;
+  }
+  select.cell-select:focus{ outline:1px solid var(--modelado); }
+  select.cell-select option{ background:var(--surface); color:var(--text); }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div>
+      <div class="eyebrow">Departamento Strategist: Documentación de OKR</div>
+      <h1>Mapa de valor: de la oferta al resultado de negocio</h1>
+      <p>Cobertura al 100% de los 3 macro-servicios (BUILD, FutureProof, Agentic). La matriz recolecta evidencia por proyecto, el canvas documenta la cadena por servicio, el stack marca hasta qué nivel esa cadena está realmente comprobada.</p>
+      <div class="source-note">Actualizado con el Diagnóstico de conocimiento estratégico del equipo de estrategas (13 ago 2026, n=9). Ver banderas de riesgo abajo antes de tratar el contenido como definitivo.</div>
+    </div>
+    <div class="logo-mark"><span class="logo-sq"></span><b>BLUE</b><span class="thin">PIXEL</span></div>
+  </header>
+
+  <div class="legend">
+    <div class="legend-item"><span class="dot" style="background:var(--comprobado)"></span>Cumple: el resultado de negocio del documento se comprobó en este proyecto</div>
+    <div class="legend-item"><span class="dot" style="background:var(--modelado)"></span>Cumple parcial: hay avance hacia el resultado, pero no está completo o cuantificado</div>
+    <div class="legend-item"><span class="dot" style="background:var(--nocumple)"></span>No cumple: se ejecutó el servicio y el resultado esperado no se dio</div>
+    <div class="legend-item"><span class="dot" style="background:var(--pendiente)"></span>Sin medir: todavía no se evaluó</div>
+    <div class="legend-item"><span class="na" style="opacity:1;">N/A</span>No aplica: el cliente no contrató este servicio</div>
+    <div class="legend-item"><span style="color:var(--alerta); font-size:13px;">⚠</span>Bandera de riesgo: la encuesta contradice la definición oficial</div>
+  </div>
+  <p style="font-size:12.5px; color:var(--text-dim); margin:12px 4px 0;">La meta (el "resultado de negocio esperado") es fija: es lo que dice el documento oficial de servicios, no se cuestiona aquí. Lo que esta matriz mapea es si esa meta se está cumpliendo o no, proyecto por proyecto.</p>
+
+  <!-- CONTEXTO CHECKLIST -->
+  <section>
+    <div class="section-head">
+      <div class="tag">00 · Contexto</div>
+      <h2>Checklist de cumplimiento: check de Sesión 1</h2>
+      <p>Vamos a validar el alcance de cada proyecto en un formato aparte (el checklist de Excel), con el fin de confirmar si lo que promete la propuesta oficial de línea de servicio (oferta, mecanismo, output) se está entregando de verdad, proyecto por proyecto, y de identificar la causa cuando no. Qué evaluamos: cada elemento documentado del servicio, ítem por ítem, contra evidencia real del proyecto, no percepción. Por qué en un formato aparte: con 9 estrategas y varios proyectos activos a la vez, ese nivel de detalle no escala ni queda trazable dentro de este documento. Este mapa de valor sigue siendo el documento principal de la matriz: aquí se lee el resultado agregado por servicio y proyecto; el detalle ítem por ítem vive en el Excel.</p>
+    </div>
+  </section>
+
+  <!-- MATRIZ -->
+  <section>
+    <div class="section-head">
+      <div class="tag">01 · Recolección</div>
+      <h2>Matriz de trazabilidad: servicio × proyecto</h2>
+      <p>La meta por servicio ya está definida en el documento oficial (ver canvas abajo). Esta matriz no la redefine: mapea, proyecto por proyecto, si esa meta se cumplió, se cumplió parcialmente, no se cumplió, o todavía no se ha medido, usando el checklist de validación del Excel como fuente del dato, no criterio libre.</p>
+      <p class="subnote">No esperes a tener ROI cuantificado para marcar Cumple: usa los dos niveles de cumplimiento de abajo. Marca N/A donde el servicio no aplica al cliente, no lo dejes como sin medir.</p>
+    </div>
+    <div class="matrix-scroll">
+      <table>
+        <thead>
+          <tr>
+            <th>Servicio</th>
+            <th>PMI México<br>(Together Club)</th>
+            <th>PMI Colombia</th>
+            <th>PMI Canadá<br>(VOYE)</th>
+            <th>APAC</th>
+            <th>Naturgy<br>(ACERCA)</th>
+            <th>Cemex<br>(BDE)</th>
+            <th>IQOS Club</th>
+            <th>NUT</th>
+            <th>GHIBERTI</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <th><span class="accent" style="background:var(--build)"></span>BUILD · cumplimiento de la meta</th>
+            <td><select class="cell-select state-select"><option value="">·</option><option value="Cumple">Cumple</option><option value="Cumple parcial">Cumple parcial</option><option value="No cumple">No cumple</option><option value="Sin medir">Sin medir</option><option value="N/A">N/A</option></select></td><td><select class="cell-select state-select"><option value="">·</option><option value="Cumple">Cumple</option><option value="Cumple parcial">Cumple parcial</option><option value="No cumple">No cumple</option><option value="Sin medir">Sin medir</option><option value="N/A">N/A</option></select></td><td><select class="cell-select state-select"><option value="">·</option><option value="Cumple">Cumple</option><option value="Cumple parcial">Cumple parcial</option><option value="No cumple">No cumple</option><option value="Sin medir">Sin medir</option><option value="N/A">N/A</option></select></td>
+            <td><select class="cell-select state-select"><option value="">·</option><option value="Cumple">Cumple</option><option value="Cumple parcial">Cumple parcial</option><option value="No cumple">No cumple</option><option value="Sin medir">Sin medir</option><option value="N/A">N/A</option></select></td><td><select class="cell-select state-select"><option value="">·</option><option value="Cumple">Cumple</option><option value="Cumple parcial">Cumple parcial</option><option value="No cumple">No cumple</option><option value="Sin medir">Sin medir</option><option value="N/A">N/A</option></select></td><td><select class="cell-select state-select"><option value="">·</option><option value="Cumple">Cumple</option><option value="Cumple parcial">Cumple parcial</option><option value="No cumple">No cumple</option><option value="Sin medir">Sin medir</option><option value="N/A">N/A</option></select></td>
+            <td><select class="cell-select state-select"><option value="">·</option><option value="Cumple">Cumple</option><option value="Cumple parcial">Cumple parcial</option><option value="No cumple">No cumple</option><option value="Sin medir">Sin medir</option><option value="N/A">N/A</option></select></td><td><select class="cell-select state-select"><option value="">·</option><option value="Cumple">Cumple</option><option value="Cumple parcial">Cumple parcial</option><option value="No cumple">No cumple</option><option value="Sin medir">Sin medir</option><option value="N/A">N/A</option></select></td><td><select class="cell-select state-select"><option value="">·</option><option value="Cumple">Cumple</option><option value="Cumple parcial">Cumple parcial</option><option value="No cumple">No cumple</option><option value="Sin medir">Sin medir</option><option value="N/A">N/A</option></select></td>
+          </tr>
+          <tr class="quality-row">
+            <th>Calidad baseline<span class="metric-status">Checklist discovery/alcance: por diseñar (rec. #4 del diagnóstico)</span></th>
+            <td contenteditable="true">N/D</td><td contenteditable="true">N/D</td><td contenteditable="true">N/D</td>
+            <td contenteditable="true">N/D</td><td contenteditable="true">N/D</td><td contenteditable="true">N/D</td>
+            <td contenteditable="true">N/D</td><td contenteditable="true">N/D</td><td contenteditable="true">N/D</td>
+          </tr>
+          <tr>
+            <th><span class="accent" style="background:var(--futureproof)"></span>FutureProof · cumplimiento de la meta</th>
+            <td><select class="cell-select state-select"><option value="">·</option><option value="Cumple">Cumple</option><option value="Cumple parcial">Cumple parcial</option><option value="No cumple">No cumple</option><option value="Sin medir">Sin medir</option><option value="N/A">N/A</option></select></td><td><select class="cell-select state-select"><option value="">·</option><option value="Cumple">Cumple</option><option value="Cumple parcial">Cumple parcial</option><option value="No cumple">No cumple</option><option value="Sin medir">Sin medir</option><option value="N/A">N/A</option></select></td><td><select class="cell-select state-select"><option value="">·</option><option value="Cumple">Cumple</option><option value="Cumple parcial">Cumple parcial</option><option value="No cumple">No cumple</option><option value="Sin medir">Sin medir</option><option value="N/A">N/A</option></select></td>
+            <td><select class="cell-select state-select"><option value="">·</option><option value="Cumple">Cumple</option><option value="Cumple parcial">Cumple parcial</option><option value="No cumple">No cumple</option><option value="Sin medir">Sin medir</option><option value="N/A">N/A</option></select></td><td><select class="cell-select state-select"><option value="">·</option><option value="Cumple">Cumple</option><option value="Cumple parcial">Cumple parcial</option><option value="No cumple">No cumple</option><option value="Sin medir">Sin medir</option><option value="N/A">N/A</option></select></td><td><select class="cell-select state-select"><option value="">·</option><option value="Cumple">Cumple</option><option value="Cumple parcial">Cumple parcial</option><option value="No cumple">No cumple</option><option value="Sin medir">Sin medir</option><option value="N/A">N/A</option></select></td>
+            <td><select class="cell-select state-select"><option value="">·</option><option value="Cumple">Cumple</option><option value="Cumple parcial">Cumple parcial</option><option value="No cumple">No cumple</option><option value="Sin medir">Sin medir</option><option value="N/A">N/A</option></select></td><td><select class="cell-select state-select"><option value="">·</option><option value="Cumple">Cumple</option><option value="Cumple parcial">Cumple parcial</option><option value="No cumple">No cumple</option><option value="Sin medir">Sin medir</option><option value="N/A">N/A</option></select></td><td><select class="cell-select state-select"><option value="">·</option><option value="Cumple">Cumple</option><option value="Cumple parcial">Cumple parcial</option><option value="No cumple">No cumple</option><option value="Sin medir">Sin medir</option><option value="N/A">N/A</option></select></td>
+          </tr>
+          <tr class="quality-row">
+            <th>Calidad baseline<span class="metric-status">UX Health Score (Digital Pulse): bloqueado por estado en disputa</span></th>
+            <td contenteditable="true">N/D</td><td contenteditable="true">N/D</td><td contenteditable="true">N/D</td>
+            <td contenteditable="true">N/D</td><td contenteditable="true">N/D</td><td contenteditable="true">N/D</td>
+            <td contenteditable="true">N/D</td><td contenteditable="true">N/D</td><td contenteditable="true">N/D</td>
+          </tr>
+          <tr>
+            <th><span class="accent" style="background:var(--agentic)"></span>Agentic · cumplimiento de la meta</th>
+            <td><select class="cell-select state-select"><option value="">·</option><option value="Cumple">Cumple</option><option value="Cumple parcial">Cumple parcial</option><option value="No cumple">No cumple</option><option value="Sin medir">Sin medir</option><option value="N/A">N/A</option></select></td><td><select class="cell-select state-select"><option value="">·</option><option value="Cumple">Cumple</option><option value="Cumple parcial">Cumple parcial</option><option value="No cumple">No cumple</option><option value="Sin medir">Sin medir</option><option value="N/A">N/A</option></select></td><td><select class="cell-select state-select"><option value="">·</option><option value="Cumple">Cumple</option><option value="Cumple parcial">Cumple parcial</option><option value="No cumple">No cumple</option><option value="Sin medir">Sin medir</option><option value="N/A">N/A</option></select></td>
+            <td><select class="cell-select state-select"><option value="">·</option><option value="Cumple">Cumple</option><option value="Cumple parcial">Cumple parcial</option><option value="No cumple">No cumple</option><option value="Sin medir">Sin medir</option><option value="N/A">N/A</option></select></td><td><select class="cell-select state-select"><option value="">·</option><option value="Cumple">Cumple</option><option value="Cumple parcial">Cumple parcial</option><option value="No cumple">No cumple</option><option value="Sin medir">Sin medir</option><option value="N/A">N/A</option></select></td><td><select class="cell-select state-select"><option value="">·</option><option value="Cumple">Cumple</option><option value="Cumple parcial">Cumple parcial</option><option value="No cumple">No cumple</option><option value="Sin medir">Sin medir</option><option value="N/A">N/A</option></select></td>
+            <td><select class="cell-select state-select"><option value="">·</option><option value="Cumple">Cumple</option><option value="Cumple parcial">Cumple parcial</option><option value="No cumple">No cumple</option><option value="Sin medir">Sin medir</option><option value="N/A">N/A</option></select></td><td><select class="cell-select state-select"><option value="">·</option><option value="Cumple">Cumple</option><option value="Cumple parcial">Cumple parcial</option><option value="No cumple">No cumple</option><option value="Sin medir">Sin medir</option><option value="N/A">N/A</option></select></td><td><select class="cell-select state-select"><option value="">·</option><option value="Cumple">Cumple</option><option value="Cumple parcial">Cumple parcial</option><option value="No cumple">No cumple</option><option value="Sin medir">Sin medir</option><option value="N/A">N/A</option></select></td>
+          </tr>
+          <tr class="quality-row">
+            <th>Calidad baseline<span class="metric-status">Sin instrumento. Prioridad: cerrar brecha de capacitación (44% no conoce el servicio)</span></th>
+            <td contenteditable="true">N/D</td><td contenteditable="true">N/D</td><td contenteditable="true">N/D</td>
+            <td contenteditable="true">N/D</td><td contenteditable="true">N/D</td><td contenteditable="true">N/D</td>
+            <td contenteditable="true">N/D</td><td contenteditable="true">N/D</td><td contenteditable="true">N/D</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="evidence-tiers">
+      <div class="tier-chip"><b>Nivel 1 · Cumple cualitativo:</b> cualquier Strategist que trabajó el proyecto puede confirmar que la meta se dio (qué cambió para el cliente, sin cifra).</div>
+      <div class="tier-chip"><b>Nivel 2 · Cumple cuantificado:</b> requiere precio y costo real del proyecto para expresar el cumplimiento en ROI; hoy con acceso limitado según la encuesta.</div>
+    </div>
+    <div class="demo-row">
+      Ejemplos ilustrativos: <span class="pill cumple"><span class="dot" style="background:var(--comprobado)"></span>Cumple · N1</span> "Cliente X, mar. 2026: roadmap FutureProof redujo el tiempo de ciclo de fricciones reportadas." &nbsp;|&nbsp; <span class="pill nocumple"><span class="dot" style="background:var(--nocumple)"></span>No cumple</span> "Cliente Z tuvo BUILD entregado, pero no bajó el time-to-market prometido." &nbsp;|&nbsp; <span class="na" style="opacity:1;">N/A</span> "Cliente Y nunca contrató Agentic."
+    </div>
+  </section>
+
+  <!-- CANVAS -->
+  <section>
+    <div class="section-head">
+      <div class="tag">02 · Documento oficial</div>
+      <h2>Mapa de valor por servicio</h2>
+      <p>El artefacto que exige el OKR. Es el mapa de valor ideal: lo que la propuesta oficial promete, con el nivel de madurez al que ese mecanismo apunta por diseño. El cumplimiento real de cada proyecto se lee en la matriz y en la auditoría de brechas, no aquí.</p>
+    </div>
+
+    <div class="canvas-card service-build">
+      <div class="card-top">
+        <div class="service-name">BUILD</div>
+        <span class="pill alerta">⚠ Brecha venta-entrega, hipótesis a validar</span>
+      </div>
+      <div class="service-sub">Tu plataforma en 90 días, lista para escalar</div>
+      <span class="pill meta" style="margin-bottom:14px;">Nivel ideal (propuesta): N4 · Impacto de negocio</span>
+      <div class="canvas-grid">
+        <div class="canvas-field">
+          <div class="field-label">Oferta (comercial, según brochure)</div>
+          <div class="field-body">Concepto inicial que valida arquitectura y flujos críticos antes de escalar el desarrollo completo.</div>
+          <div class="field-flag">Según la encuesta ago-2026, se vende como MVP iterativo pero al menos 2 estrategas describen que se entrega como proyecto grande en tiempo corto. Casos citados de retrabajo por alcance mal definido: Bimbo, Hogares Unión.
+            <span class="flag-source">Confirmar con Ventas y PM antes de tomar esta oferta como definitiva.</span>
+          </div>
+        </div>
+        <div class="canvas-field">
+          <div class="field-label">Mecanismo</div>
+          <div class="field-body">Investigación con usuarios reales, gemelos digitales (Impath), auditorías OWASP / ISO 27001, arquitectura cloud-ready modular.</div>
+        </div>
+        <div class="canvas-field">
+          <div class="field-label">Output</div>
+          <div class="field-body">Plataforma probada con usuarios reales, validada con gemelos digitales, lista para crecer con el negocio.</div>
+        </div>
+        <div class="canvas-field">
+          <div class="field-label">Resultado del cliente</div>
+          <div class="field-body">Sabe exactamente qué construir antes de comprometer el presupuesto completo; reduce el riesgo de reconstrucción.</div>
+        </div>
+        <div class="canvas-field result">
+          <div class="field-label">Resultado de negocio esperado</div>
+          <div class="field-body">Menor gasto en desarrollo mal dirigido, time-to-market más corto con menor riesgo de retrabajo. <span class="pill meta" style="margin-top:8px;">Meta oficial (documento)</span></div>
+          <div class="evidence-line">Cumplimiento real: <span class="fill" contenteditable="true">Por definir según gap audit</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="canvas-card service-fp">
+      <div class="card-top">
+        <div class="service-name">FutureProof</div>
+        <span class="pill alerta">⚠ Digital Pulse en disputa + brecha venta-entrega</span>
+      </div>
+      <div class="service-sub">Tu plataforma evoluciona con tu negocio</div>
+      <span class="pill meta" style="margin-bottom:14px;">Nivel ideal (propuesta): N4 · Impacto de negocio</span>
+      <div class="canvas-grid">
+        <div class="canvas-field">
+          <div class="field-label">Oferta (comercial, según brochure)</div>
+          <div class="field-body">Roadmap vivo de 12 meses, alineado a objetivos de negocio reales y actualizado cada sprint.</div>
+          <div class="field-flag">Al menos 3 de 9 estrategas describen FutureProof como soporte reactivo post-proyecto, no como evolución continua. La persona con más conocimiento del portafolio confirma que esto "se ha desdibujado" en la ejecución real, no es solo percepción.
+            <span class="flag-source">Confirmar con Ventas y PM antes de tomar esta oferta como definitiva.</span>
+          </div>
+        </div>
+        <div class="canvas-field">
+          <div class="field-label">Mecanismo</div>
+          <div class="field-body">UX Health Score continuo, detección proactiva de fricciones (Impath), ritmo de taller estratégico, check quincenal, reporte mensual y sesión trimestral.</div>
+          <div class="field-flag">Digital Pulse es la tecnología detrás del UX Health Score y el roadmap vivo. 6 de 9 estrategas no lo conocen, y los 2 que sí lo conocen (incluida la persona con más conocimiento del portafolio) dicen que está inactivo o reemplazado por una herramienta externa, en contradicción con la definición oficial.
+            <span class="flag-source">No citar como mecanismo vigente sin resolver el estado real primero.</span>
+          </div>
+        </div>
+        <div class="canvas-field">
+          <div class="field-label">Output</div>
+          <div class="field-body">Score de salud de plataforma, roadmap priorizado con evidencia, impacto financiero documentado por cada mejora.</div>
+        </div>
+        <div class="canvas-field">
+          <div class="field-label">Resultado del cliente</div>
+          <div class="field-body">Identifica dónde pierde tracción la plataforma antes de que el usuario lo reporte; decide con datos, no con intuición.</div>
+        </div>
+        <div class="canvas-field result">
+          <div class="field-label">Resultado de negocio esperado</div>
+          <div class="field-body">ROI documentado, horas ahorradas, mejora medible en conversión y retención. <span class="pill meta" style="margin-top:8px;">Meta oficial (documento)</span></div>
+          <div class="evidence-line">Cumplimiento real: <span class="fill" contenteditable="true">Por definir según gap audit</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="canvas-card service-agentic">
+      <div class="card-top">
+        <div class="service-name">Agentic</div>
+        <span class="pill alerta">⚠ 44% del equipo no lo conoce</span>
+      </div>
+      <div class="service-sub">Plataformas que piensan, aprenden y actúan</div>
+      <span class="pill meta" style="margin-bottom:14px;">Nivel ideal (propuesta): N4 · Impacto de negocio</span>
+      <div class="canvas-grid">
+        <div class="canvas-field">
+          <div class="field-label">Oferta (comercial, según brochure)</div>
+          <div class="field-body">Capacidad de IA diseñada desde el inicio, disponible para cualquier plataforma que se construya o evolucione.</div>
+        </div>
+        <div class="canvas-field">
+          <div class="field-label">Mecanismo</div>
+          <div class="field-body">Agentes integrados, automatización de flujos operativos, conexión vía API con CRM/ERP, Single Source of Truth, copilotos, analytics con IA.</div>
+        </div>
+        <div class="canvas-field">
+          <div class="field-label">Output</div>
+          <div class="field-body">Workflows sin intervención manual, copilotos disponibles 24/7, dashboards que recomiendan qué optimizar primero.</div>
+          <div class="field-flag">A diferencia de BUILD y FutureProof, aquí no hay hipótesis de brecha venta-entrega porque casi nadie en el equipo conoce el servicio lo suficiente para reportar una. La brecha previa es de capacitación, no de ejecución.</div>
+        </div>
+        <div class="canvas-field">
+          <div class="field-label">Resultado del cliente</div>
+          <div class="field-body">Reduce fricción operativa de forma continua y autónoma; decide con contexto completo del negocio.</div>
+        </div>
+        <div class="canvas-field result">
+          <div class="field-label">Resultado de negocio esperado</div>
+          <div class="field-body">Menor costo operativo por reducción de intervención manual en procesos de alto volumen. <span class="pill meta" style="margin-top:8px;">Meta oficial (documento)</span></div>
+          <div class="evidence-line">Cumplimiento real: <span class="fill" contenteditable="true">sin proyecto activo que lo sustente aún</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- GAP AUDIT -->
+  <section>
+    <div class="section-head">
+      <div class="tag">03 · Priorización</div>
+      <h2>Auditoría de brechas: tamaño × riesgo/impacto</h2>
+      <p>Cruza qué tan grande es la brecha de evidencia con qué tan caro sale dejarla abierta. No llenar todavía: depende de que primero cierres el "resultado de negocio esperado" por servicio en el canvas, y en FutureProof, de resolver el estado de Digital Pulse.</p>
+    </div>
+
+    <div class="rubric">
+      <div class="rubric-box">
+        <div class="rubric-title">Eje X · Tamaño de la brecha (hereda el cumplimiento de la matriz)</div>
+        <ol>
+          <li><span class="k">Cumple</span>Brecha nula</li>
+          <li><span class="k">Cumple parcial</span>Brecha media</li>
+          <li><span class="k">Sin medir</span>Brecha grande: hay que medir antes de actuar</li>
+          <li><span class="k">No cumple</span>Brecha crítica: confirmado, no supuesto</li>
+        </ol>
+      </div>
+      <div class="rubric-box">
+        <div class="rubric-title">Eje Y · Riesgo/impacto si no se cierra [Suposición: rúbrica de partida, ajústala]</div>
+        <ol>
+          <li><span class="k">Cliente estratégico o de alta visibilidad</span>+1</li>
+          <li><span class="k">Ya hay retrabajo o fricción reportada ahí</span>+1</li>
+          <li><span class="k">De esto depende una decisión próxima (renovación, upsell, propuesta)</span>+1</li>
+        </ol>
+      </div>
+    </div>
+
+    <div class="quad-wrap">
+      <div class="quad-yaxis"><span>Alto</span><span>Riesgo / impacto</span><span>Bajo</span></div>
+      <div class="quad-grid">
+        <div class="quad-cell quad-vigilar">
+          <div class="quad-label">Vigilar de cerca</div>
+          <div class="quad-desc">Brecha pequeña, riesgo alto. No es urgente documentar, pero un cambio pequeño en el proyecto lo vuelve crítico.</div>
+          <div class="quad-chips" contenteditable="true"></div>
+        </div>
+        <div class="quad-cell quad-actuar">
+          <div class="quad-label">Actuar ya</div>
+          <div class="quad-desc">Brecha grande, riesgo alto. Aquí se concentra el esfuerzo del trimestre.</div>
+          <div class="quad-chips" contenteditable="true"></div>
+        </div>
+        <div class="quad-cell quad-bajo">
+          <div class="quad-label">Bajo riesgo</div>
+          <div class="quad-desc">Brecha pequeña, riesgo bajo. Mantener, no invertir esfuerzo extra aquí.</div>
+          <div class="quad-chips" contenteditable="true"></div>
+        </div>
+        <div class="quad-cell quad-programar">
+          <div class="quad-label">Programar, no urgente</div>
+          <div class="quad-desc">Brecha grande, riesgo bajo. Documentar cuando haya capacidad, sin presión de calendario.</div>
+          <div class="quad-chips" contenteditable="true"></div>
+        </div>
+      </div>
+    </div>
+    <div class="quad-xaxis" style="padding-left:34px;">
+      <span>Brecha pequeña</span><span>Tamaño de la brecha</span><span>Brecha crítica</span>
+    </div>
+    <p class="quad-example-note">Sin llenar todavía. Cada celda no-N/A de la matriz se coloca aquí una vez tenga certeza (eje X) y score de riesgo (eje Y) reales.</p>
+  </section>
+
+  <!-- VALIDACION REAL VS IDEAL -->
+  <section>
+    <div class="section-head">
+      <div class="tag">04 · Pendiente</div>
+      <h2>Validación real vs. ideal: BUILD y FutureProof</h2>
+      <p>Se llena una vez por proyecto, después de comparar lo que el equipo realmente entrega contra lo que promete la propuesta oficial (secciones 00 a 03). Agentic queda fuera de esta ronda: el equipo todavía no tiene suficiente conocimiento del servicio para evaluarlo con confianza.</p>
+    </div>
+
+    <div class="cause-legend">
+      <span class="cause-chip"><b>D1</b> Discovery/alcance deficiente</span>
+      <span class="cause-chip"><b>D2</b> Scope creep no controlado</span>
+      <span class="cause-chip"><b>D3</b> Falta de alineación/comunicación</span>
+      <span class="cause-chip"><b>D4</b> Incumplimiento de SOP/proceso</span>
+      <span class="cause-chip"><b>D5</b> Brecha venta-entrega</span>
+      <span class="cause-chip"><b>D6</b> Falta de capacitación del equipo en el servicio</span>
+      <span class="cause-chip"><b>D7</b> Falta de acceso a datos comerciales</span>
+      <span class="cause-chip"><b>D8</b> Otra (especificar en evidencia)</span>
+    </div>
+
+    <div class="check-block service-build">
+      <div class="check-head"><span class="accent-dot" style="background:var(--build)"></span><span class="service-name">BUILD</span></div>
+      <div class="check-meta">
+        <span>Proyecto: <span class="fill" contenteditable="true">_____________</span></span>
+        <span>Fecha del check: <span class="fill" contenteditable="true">_____________</span></span>
+        <span>Evaluado por: <span class="fill" contenteditable="true">_____________</span></span>
+      </div>
+      <table class="check-table">
+        <tr><th style="width:22%">Elemento (PDF)</th><th style="width:34%">Criterio de cumplimiento</th><th style="width:12%">Estado</th><th style="width:10%">Causa</th><th style="width:22%">Evidencia / nota</th></tr>
+        <tr><td>Concepto inicial validado</td><td class="crit">Existe un PRD/Business Case aprobado antes de escalar a Construcción completa.</td><td><select class="cell-select state-select"><option value="">·</option><option value="Cumple">Cumple</option><option value="Cumple parcial">Cumple parcial</option><option value="No cumple">No cumple</option><option value="Sin medir">Sin medir</option><option value="N/A">N/A</option></select></td><td><select class="cell-select"><option value="">·</option><option value="D1">D1</option><option value="D2">D2</option><option value="D3">D3</option><option value="D4">D4</option><option value="D5">D5</option><option value="D6">D6</option><option value="D7">D7</option><option value="D8">D8</option></select></td><td contenteditable="true">_____</td></tr>
+        <tr><td>Investigación con usuarios reales</td><td class="crit">Hay investigación documentada con usuarios reales, no solo supuestos internos del equipo.</td><td><select class="cell-select state-select"><option value="">·</option><option value="Cumple">Cumple</option><option value="Cumple parcial">Cumple parcial</option><option value="No cumple">No cumple</option><option value="Sin medir">Sin medir</option><option value="N/A">N/A</option></select></td><td><select class="cell-select"><option value="">·</option><option value="D1">D1</option><option value="D2">D2</option><option value="D3">D3</option><option value="D4">D4</option><option value="D5">D5</option><option value="D6">D6</option><option value="D7">D7</option><option value="D8">D8</option></select></td><td contenteditable="true">_____</td></tr>
+        <tr><td>Gemelos Digitales (Impath)</td><td class="crit">Se generaron perfiles conductuales y un mapa de fricciones priorizado por criticidad.</td><td><select class="cell-select state-select"><option value="">·</option><option value="Cumple">Cumple</option><option value="Cumple parcial">Cumple parcial</option><option value="No cumple">No cumple</option><option value="Sin medir">Sin medir</option><option value="N/A">N/A</option></select></td><td><select class="cell-select"><option value="">·</option><option value="D1">D1</option><option value="D2">D2</option><option value="D3">D3</option><option value="D4">D4</option><option value="D5">D5</option><option value="D6">D6</option><option value="D7">D7</option><option value="D8">D8</option></select></td><td contenteditable="true">_____</td></tr>
+        <tr><td>Auditorías OWASP / ISO 27001</td><td class="crit">Se ejecutaron auditorías de seguridad en cada fase, con hallazgos documentados.</td><td><select class="cell-select state-select"><option value="">·</option><option value="Cumple">Cumple</option><option value="Cumple parcial">Cumple parcial</option><option value="No cumple">No cumple</option><option value="Sin medir">Sin medir</option><option value="N/A">N/A</option></select></td><td><select class="cell-select"><option value="">·</option><option value="D1">D1</option><option value="D2">D2</option><option value="D3">D3</option><option value="D4">D4</option><option value="D5">D5</option><option value="D6">D6</option><option value="D7">D7</option><option value="D8">D8</option></select></td><td contenteditable="true">_____</td></tr>
+        <tr><td>Arquitectura cloud-ready modular</td><td class="crit">La arquitectura entregada es modular y preparada para escalar/integrar IA, no un monolito ad-hoc.</td><td><select class="cell-select state-select"><option value="">·</option><option value="Cumple">Cumple</option><option value="Cumple parcial">Cumple parcial</option><option value="No cumple">No cumple</option><option value="Sin medir">Sin medir</option><option value="N/A">N/A</option></select></td><td><select class="cell-select"><option value="">·</option><option value="D1">D1</option><option value="D2">D2</option><option value="D3">D3</option><option value="D4">D4</option><option value="D5">D5</option><option value="D6">D6</option><option value="D7">D7</option><option value="D8">D8</option></select></td><td contenteditable="true">_____</td></tr>
+      </table>
+    </div>
+
+    <div class="check-block service-fp">
+      <div class="check-head"><span class="accent-dot" style="background:var(--futureproof)"></span><span class="service-name">FutureProof</span></div>
+      <div class="check-note">⚠ El ítem de UX Health Score depende de Digital Pulse. No marcar Cumple/No cumple ahí, usa N/A hasta que se resuelva el estado del servicio.</div>
+      <div class="check-meta">
+        <span>Proyecto: <span class="fill" contenteditable="true">_____________</span></span>
+        <span>Fecha del check: <span class="fill" contenteditable="true">_____________</span></span>
+        <span>Evaluado por: <span class="fill" contenteditable="true">_____________</span></span>
+      </div>
+      <table class="check-table">
+        <tr><th style="width:22%">Elemento (PDF)</th><th style="width:34%">Criterio de cumplimiento</th><th style="width:12%">Estado</th><th style="width:10%">Causa</th><th style="width:22%">Evidencia / nota</th></tr>
+        <tr><td>Roadmap vivo de 12 meses</td><td class="crit">Existe un roadmap de 12 meses actualizado cada sprint, no un backlog estático de cierre.</td><td><select class="cell-select state-select"><option value="">·</option><option value="Cumple">Cumple</option><option value="Cumple parcial">Cumple parcial</option><option value="No cumple">No cumple</option><option value="Sin medir">Sin medir</option><option value="N/A">N/A</option></select></td><td><select class="cell-select"><option value="">·</option><option value="D1">D1</option><option value="D2">D2</option><option value="D3">D3</option><option value="D4">D4</option><option value="D5">D5</option><option value="D6">D6</option><option value="D7">D7</option><option value="D8">D8</option></select></td><td contenteditable="true">_____</td></tr>
+        <tr><td>UX Health Score continuo</td><td class="crit">Hay un score cuantificado y medido de forma permanente.</td><td><select class="cell-select state-select"><option value="">·</option><option value="Cumple">Cumple</option><option value="Cumple parcial">Cumple parcial</option><option value="No cumple">No cumple</option><option value="Sin medir">Sin medir</option><option value="N/A" selected>N/A</option></select></td><td><select class="cell-select"><option value="">·</option><option value="D1">D1</option><option value="D2">D2</option><option value="D3">D3</option><option value="D4">D4</option><option value="D5">D5</option><option value="D6">D6</option><option value="D7">D7</option><option value="D8">D8</option></select></td><td contenteditable="true">*Digital Pulse en disputa</td></tr>
+        <tr><td>Detección proactiva de fricciones (Impath)</td><td class="crit">Se identifican fricciones antes de que el cliente las reporte, con impacto estimado.</td><td><select class="cell-select state-select"><option value="">·</option><option value="Cumple">Cumple</option><option value="Cumple parcial">Cumple parcial</option><option value="No cumple">No cumple</option><option value="Sin medir">Sin medir</option><option value="N/A">N/A</option></select></td><td><select class="cell-select"><option value="">·</option><option value="D1">D1</option><option value="D2">D2</option><option value="D3">D3</option><option value="D4">D4</option><option value="D5">D5</option><option value="D6">D6</option><option value="D7">D7</option><option value="D8">D8</option></select></td><td contenteditable="true">_____</td></tr>
+        <tr><td>Ritmo FutureProof</td><td class="crit">Taller estratégico, check quincenal, reporte mensual y sesión trimestral se ejecutan como están definidos, no reemplazados por soporte reactivo ad-hoc.</td><td><select class="cell-select state-select"><option value="">·</option><option value="Cumple">Cumple</option><option value="Cumple parcial">Cumple parcial</option><option value="No cumple">No cumple</option><option value="Sin medir">Sin medir</option><option value="N/A">N/A</option></select></td><td><select class="cell-select"><option value="">·</option><option value="D1">D1</option><option value="D2">D2</option><option value="D3">D3</option><option value="D4">D4</option><option value="D5">D5</option><option value="D6">D6</option><option value="D7">D7</option><option value="D8">D8</option></select></td><td contenteditable="true">_____</td></tr>
+      </table>
+    </div>
+
+    <p class="quad-example-note">Cómo agrega hacia arriba: el resultado por ítem alimenta la celda de la matriz (sección 01) para ese servicio y proyecto. Si la causa dominante de los "No cumple" se repite entre proyectos, es sistémica: eso es lo que debería mover el eje de riesgo/impacto de la auditoría de brechas (sección 03), no una estimación a ojo.</p>
+  </section>
+
+</div>
+<script>
+(function(){
+  var stateColors = {
+    'Cumple': 'var(--comprobado)',
+    'Cumple parcial': 'var(--modelado)',
+    'No cumple': 'var(--nocumple)',
+    'Sin medir': 'var(--pendiente)',
+    'N/A': 'var(--text-dim)'
+  };
+  function paint(sel){
+    var c = stateColors[sel.value] || 'var(--text-dim)';
+    sel.style.color = c;
+    sel.style.borderColor = c;
+  }
+  document.querySelectorAll('select.state-select').forEach(function(sel){
+    paint(sel);
+    sel.addEventListener('change', function(){ paint(sel); });
+  });
+})();
+</script>
+</body>
+</html>

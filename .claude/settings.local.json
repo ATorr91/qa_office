@@ -93,7 +93,16 @@
       "Bash(pkill -f \"next dev\")",
       "mcp__claude-in-chrome__navigate",
       "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" http://localhost:3000/dashboard-estrategas)",
-      "Bash(jobs)"
+      "Bash(jobs)",
+      "Bash(open -a TextEdit /Users/alantorres/Desktop/qa_office/.env.local)",
+      "Bash(ps -p 27668 -o pid,ppid,command)",
+      "Bash(curl -sS -m 3 -o /dev/null -w \"%{http_code}\\\\n\" http://localhost:3000/)",
+      "Bash(node -e ' *)",
+      "Bash(curl -sS -X POST http://localhost:50083/api/jira/deadlines -H 'Content-Type: application/json' -d '{\"boards\": {\"adriana-ruiz\": \"APAC, MKT , OPS\"}}')",
+      "Bash(open -e .env.local)",
+      "Bash(curl -sS -X POST http://localhost:50445/api/jira/deadlines -H 'Content-Type: application/json' -d '{\"boards\": {}}')",
+      "Bash(curl -sS -X POST http://localhost:50445/api/jira/deadlines -H 'Content-Type: application/json' -d '{\"boards\": { *)",
+      "Bash(cd /Users/alantorres/Desktop/qa_office && find src/app -maxdepth 2 -type f -name \"*.tsx\" | sort)"
     ]
   }
 }
