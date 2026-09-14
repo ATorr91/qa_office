@@ -87,6 +87,23 @@ const DESTINATIONS = [
       />
     ),
   },
+  {
+    href: "/capacitacion",
+    title: "Capacitación",
+    description:
+      "Prototipos interactivos LGPSM: modelo 3D, cortina de caracteres con física de viento y sonido generativo, y showroom de lentes en 3D.",
+    accent: "var(--bp-magenta)",
+    icon: (
+      <path
+        d="M12 3l9 4.5-9 4.5-9-4.5 9-4.5ZM3 7.5V15M21 7.5V15M7 10.5v5.7c0 1 2.2 2.8 5 2.8s5-1.8 5-2.8v-5.7"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    ),
+  },
 ];
 
 export default function HomePage() {
