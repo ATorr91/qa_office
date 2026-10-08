@@ -1,5 +1,5 @@
-import SunglassesHero from "@/components/capacitacion/SunglassesHero";
+import StarryNightHero from "@/components/capacitacion/StarryNightHero";
 
 export default function CapacitacionAboutPage() {
-  return <SunglassesHero />;
+  return <StarryNightHero />;
 }
