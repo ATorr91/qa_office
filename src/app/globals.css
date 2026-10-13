@@ -147,11 +147,78 @@ h1, h2, h3, h4 {
   transform: scale(0.9);
 }
 
+@keyframes bp-row-out {
+  to {
+    opacity: 0;
+    transform: translateX(18px) scale(0.98);
+  }
+}
+
+@keyframes bp-flash {
+  0% {
+    background-color: rgba(0, 193, 211, 0.3);
+  }
+  100% {
+    background-color: transparent;
+  }
+}
+
+@keyframes bp-overlay-out {
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes bp-scale-out {
+  to {
+    opacity: 0;
+    transform: scale(0.96) translateY(6px);
+  }
+}
+
+@keyframes bp-shake {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  25% {
+    transform: translateX(-4px);
+  }
+  75% {
+    transform: translateX(4px);
+  }
+}
+
+.bp-row-out {
+  animation: bp-row-out 0.2s var(--bp-ease) forwards;
+}
+
+.bp-flash {
+  animation: bp-flash 1.4s ease-out both;
+}
+
+.bp-modal-overlay-out {
+  animation: bp-overlay-out 0.18s ease-in forwards;
+}
+
+.bp-modal-panel-out {
+  animation: bp-scale-out 0.18s ease-in forwards;
+}
+
+.bp-shake {
+  animation: bp-shake 0.3s ease-in-out;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .bp-anim-page,
   .bp-anim-pop,
   .bp-modal-overlay,
   .bp-modal-panel,
+  .bp-modal-overlay-out,
+  .bp-modal-panel-out,
+  .bp-row-out,
+  .bp-flash,
+  .bp-shake,
   .bp-row-in {
     animation: none !important;
   }

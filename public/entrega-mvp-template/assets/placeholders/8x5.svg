@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 625" preserveAspectRatio="xMidYMid slice">
+<defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#eef6f4"/><stop offset="1" stop-color="#d3e7e2"/></linearGradient></defs>
+<rect width="1000" height="625" fill="url(#g)"/>
+<g fill="none" stroke="#0a4d45" stroke-opacity=".28" stroke-width="6.4" stroke-linecap="round" stroke-linejoin="round" transform="translate(455.4 227.7)">
+<rect x="0" y="0" width="89.3" height="69.6" rx="8.9"/>
+<circle cx="26.8" cy="25.0" r="8.0"/>
+<path d="M5.4 62.5 L32.1 39.3 L50.0 53.6 L62.5 42.9 L83.9 62.5"/>
+</g>
+<text x="500.0" y="352.7" text-anchor="middle" font-family="system-ui,-apple-system,Segoe UI,sans-serif" font-size="45" font-weight="600" fill="#0a4d45" fill-opacity=".55">Imagen de ejemplo</text>
+<text x="500.0" y="415.7" text-anchor="middle" font-family="ui-monospace,Menlo,monospace" font-size="27.9" fill="#0a4d45" fill-opacity=".4">2880 × 1800</text>
+</svg>

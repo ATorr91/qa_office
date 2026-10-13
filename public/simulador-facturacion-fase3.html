@@ -1,0 +1,230 @@
+<!doctype html>
+<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Simulador de facturación Fase 3</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Estética de presentación BluePixel: fondo navy con degradado a índigo, tarjetas translúcidas numeradas, acentos cian, violeta, ámbar y verde. Vista única oscura. */
+:root{
+  color-scheme:dark;
+  --navy:#0b1422; --indigo:#26338f; --card:rgba(255,255,255,.055); --card-hi:rgba(255,255,255,.09);
+  --stroke:rgba(255,255,255,.13); --ink:#f4f6fb; --soft:#b9c0d4; --dim:#7f88a3;
+  --cyan:#22c3e6; --sky:#38a9f0; --violet:#a78bfa; --amber:#f5b82e; --green:#34d399; --red:#fb7185;
+  --freeze:rgba(148,163,209,.16);
+  --sans:"Plus Jakarta Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+*{box-sizing:border-box}
+html{background:var(--navy)}
+body{background:linear-gradient(180deg,#0b1422 0%,#0f1a33 38%,#1b2770 78%,#26338f 100%) fixed;background-color:var(--navy);color:var(--ink);font-family:var(--sans);font-size:15px;line-height:1.55;min-height:100%}
+.wrap{max-width:1180px;margin:0 auto;padding-inline:24px;padding-block:36px 72px}
+.logo{display:flex;justify-content:center;align-items:center;gap:8px;font-size:22px;letter-spacing:.04em}
+.logo i{width:20px;height:20px;background:var(--cyan);display:inline-block}
+.logo b{font-weight:600}.logo span{font-weight:300}
+.hero{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.15fr);gap:20px 48px;align-items:center;margin:8px 0 36px}
+h1{font-weight:400;font-size:clamp(38px,6vw,62px);line-height:1.02;margin:0;letter-spacing:-.01em;text-wrap:balance}
+h1 em{font-style:normal;color:var(--cyan);font-weight:500}
+.hero p{font-size:18px;color:var(--ink);margin:0;font-weight:400;max-width:52ch}
+.eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.08em;color:var(--dim);text-transform:uppercase}
+.panel{background:var(--card);border:1px solid var(--stroke);border-radius:14px;padding:22px 24px;backdrop-filter:blur(6px);min-width:0}
+.controls{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:18px 32px;align-items:end}
+label{display:block;font-family:var(--mono);font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--soft);margin-bottom:10px}
+#decLbl{color:var(--cyan);text-transform:none;letter-spacing:0;font-family:var(--sans);font-weight:600;font-size:15px;margin-left:6px}
+input[type=range]{width:100%;accent-color:var(--cyan)}
+select{font:500 14px var(--sans);color:var(--ink);background:rgba(255,255,255,.06);border:1px solid var(--stroke);border-radius:8px;padding:9px 12px}
+select option{background:#16203d;color:var(--ink)}
+.quick{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+.quick button{font:500 13px var(--sans);color:var(--soft);background:transparent;border:1px solid var(--stroke);border-radius:999px;padding:6px 14px;cursor:pointer}
+.quick button:hover{color:var(--ink);border-color:var(--cyan)}
+button:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid var(--cyan);outline-offset:3px}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,230px),1fr));gap:18px;margin-top:22px}
+.card{background:var(--card);border:1px solid var(--stroke);border-radius:14px;padding:22px;display:grid;gap:6px;align-content:start;min-width:0}
+.num{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;font-size:14px;font-weight:600;border:1px solid currentColor;background:rgba(255,255,255,.04);margin-bottom:10px}
+.c1 .num{color:var(--violet)}.c2 .num{color:var(--sky)}.c3 .num{color:var(--amber)}.c4 .num{color:var(--green)}
+.card h3{margin:0;font-size:14px;font-weight:700;letter-spacing:.04em;text-transform:uppercase}
+.card .sub{font-size:13px}
+.c1 .sub{color:var(--violet)}.c2 .sub{color:var(--sky)}.c3 .sub{color:var(--amber)}.c4 .sub{color:var(--green)}
+.card .v{font-size:30px;font-weight:600;line-height:1.15;margin-top:8px;font-variant-numeric:tabular-nums}
+.card.bad{border-color:rgba(251,113,133,.55);background:rgba(251,113,133,.08)} .card.bad .v{color:var(--red)}
+.card.ok .v{color:var(--green)}
+.steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,160px),1fr));gap:0;margin-top:22px;border-top:1px solid var(--stroke)}
+.step{padding:14px 14px 4px 0;border-right:1px solid var(--stroke);min-width:0}
+.step:last-child{border-right:0}
+.step .d{font-weight:600;font-size:16px;font-variant-numeric:tabular-nums}
+.step .t{font-size:12.5px;color:var(--soft);margin-top:2px}
+h2{font-weight:500;font-size:26px;margin:40px 0 6px;letter-spacing:-.005em}
+h2 em{font-style:normal;color:var(--cyan)}
+.note{color:var(--soft);font-size:14px;max-width:78ch;margin:0 0 14px}
+.gwrap{overflow-x:auto;background:var(--card);border:1px solid var(--stroke);border-radius:14px}
+.gantt{min-width:900px;position:relative;font-size:13px}
+.grow{display:grid;grid-template-columns:240px 1fr;align-items:center;min-height:40px;border-bottom:1px solid rgba(255,255,255,.06)}
+.grow.head{min-height:44px;border-bottom:1px solid var(--stroke)}
+.lbl{padding:8px 16px;min-width:0;color:var(--ink)}
+.track{position:relative;height:100%;min-height:40px}
+.wk{position:absolute;top:0;bottom:0;border-left:1px solid rgba(255,255,255,.05)}
+.mon{position:absolute;top:14px;font:500 11px var(--mono);color:var(--soft);transform:translateX(6px);text-transform:uppercase;letter-spacing:.06em}
+.bar{position:absolute;top:13px;height:14px;border-radius:7px}
+.bar.base{background:var(--sky)} .bar.prep{background:var(--violet)} .bar.dev{background:var(--amber)} .bar.goal{background:rgba(52,211,153,.35);border:1px solid var(--green)}
+.ms{position:absolute;top:13px;width:14px;height:14px;transform:translateX(-7px) rotate(45deg);border:2px solid #101a33}
+.ms.dec{background:var(--red)} .ms.end{background:var(--ink)}
+.freeze{position:absolute;top:0;bottom:0;background:var(--freeze)}
+.legend{display:flex;flex-wrap:wrap;gap:8px 20px;margin:12px 4px 0;font-size:13px;color:var(--soft)}
+.legend span{display:inline-flex;align-items:center;gap:8px}
+.sw{width:18px;height:8px;border-radius:4px;display:inline-block}
+.tbl{overflow:auto;max-height:520px;background:var(--card);border:1px solid var(--stroke);border-radius:14px}
+table{width:100%;border-collapse:collapse;min-width:720px;font-size:13.5px}
+th{position:sticky;top:0;background:#16203d;text-align:left;font:500 11.5px var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--soft);padding:12px 14px;border-bottom:1px solid var(--stroke)}
+td{padding:9px 14px;border-bottom:1px solid rgba(255,255,255,.06);white-space:nowrap;font-variant-numeric:tabular-nums}
+tr.past td{color:var(--dim)}
+tr.is-today td{background:rgba(34,195,230,.12);font-weight:600}
+tr.agreed td{background:rgba(167,139,250,.12)}
+tr.limit td{border-top:2px solid var(--red)}
+.pill{display:inline-block;font-size:12px;font-weight:600;padding:2px 10px;border-radius:999px}
+.pill.ok{background:rgba(52,211,153,.14);color:var(--green)} .pill.bad{background:rgba(251,113,133,.14);color:var(--red)} .pill.warn{background:rgba(245,184,46,.14);color:var(--amber)}
+.foot{font-size:12.5px;color:var(--dim);margin-top:14px;max-width:90ch}
+@media (max-width:760px){.hero{grid-template-columns:1fr;margin-top:32px}.controls{grid-template-columns:1fr}.step{border-right:0;border-bottom:1px solid var(--stroke)}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head><body>
+
+<div class="wrap">
+  <section class="hero">
+    <h1>Impacto de la <em>facturación</em></h1>
+    <p>Pagos y facturación necesita la decisión de Cemex antes de entrar a desarrollo. Mueve la fecha de decisión para ver cómo cambia la entrega de Fase 3.</p>
+  </section>
+
+  <div class="panel">
+    <div class="controls">
+      <div>
+        <label for="dec">Fecha de decisión de Cemex<span id="decLbl"></span></label>
+        <input type="range" id="dec" min="0" max="10" step="1" value="0">
+        <div class="quick">
+          <button type="button" data-go="today">Hoy</button>
+          <button type="button" data-go="agreed">16 oct</button>
+          <button type="button" data-go="limit">Fecha límite</button>
+          <button type="button" data-go="plus1">Un día después del límite</button>
+        </div>
+      </div>
+      <div>
+        <label for="form">Formalización interna de Cemex</label>
+        <select id="form">
+          <option value="5" selected>5 días hábiles</option>
+          <option value="10">10 días hábiles</option>
+          <option value="15">15 días hábiles</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="cards">
+      <div class="card c1" id="k1"><span class="num">1</span><h3>Fecha límite</h3><span class="sub">Última fecha que conserva el 18 dic</span><span class="v" id="vLimit"></span></div>
+      <div class="card c2" id="k2"><span class="num">2</span><h3>Margen</h3><span class="sub">Días hábiles a la fecha elegida</span><span class="v" id="vMargin"></span></div>
+      <div class="card c3" id="k3"><span class="num">3</span><h3>Entrega</h3><span class="sub">Pagos y facturación en operación</span><span class="v" id="vEnd"></span></div>
+      <div class="card c4" id="k4"><span class="num">4</span><h3>Retraso</h3><span class="sub">Contra el 18 de diciembre</span><span class="v" id="vDelay"></span></div>
+    </div>
+
+    <div class="steps" id="steps"></div>
+  </div>
+
+  <h2>Línea de tiempo <em>octubre a febrero</em></h2>
+  <p class="note">La franja gris es el cierre de fin de año, sin liberaciones. Si el desarrollo no termina antes, las pruebas y la entrega pasan a enero.</p>
+  <div class="gwrap"><div class="gantt" id="gantt"></div></div>
+  <div class="legend">
+    <span><i class="sw" style="background:var(--sky)"></i>Plan base</span>
+    <span><i class="sw" style="background:var(--violet)"></i>Formalización y ajuste de diseño</span>
+    <span><i class="sw" style="background:var(--amber)"></i>Desarrollo y pruebas con la fecha elegida</span>
+    <span><i class="sw" style="background:rgba(52,211,153,.35);border:1px solid var(--green)"></i>Metas de Cemex</span>
+    <span><i class="sw" style="background:var(--freeze)"></i>Cierre de fin de año</span>
+  </div>
+
+  <h2>Proyección <em>día a día</em></h2>
+  <p class="note">Cada fila es un día hábil en el que Cemex podría decidir, desde el 28 de septiembre. Hasta la fecha límite cada día consume margen; un día después, la entrega pasa a enero.</p>
+  <div class="tbl"><table id="days"><thead><tr><th>Decisión</th><th>Margen</th><th>Validación del flujo</th><th>Inicio de desarrollo</th><th>Entrega</th><th>Retraso</th></tr></thead><tbody></tbody></table></div>
+  <p class="foot">Supuestos: formalización interna según el selector; 3 días hábiles para ajustar el diseño con las reglas reales; validación en la siguiente sesión semanal de jueves; el desarrollo arranca el lunes siguiente y no antes del 9 de noviembre; 24 días hábiles de desarrollo y 5 de pruebas; inhábiles el 16 de noviembre, 25 de diciembre y 1 de enero; sin trabajo ni liberaciones del 21 de diciembre al 1 de enero. Corte al 9 de octubre de 2026.</p>
+</div>
+
+<script>
+(function(){
+  const D=(s)=>{const [y,m,d]=s.split('-').map(Number);return new Date(Date.UTC(y,m-1,d));};
+  const iso=(d)=>d.toISOString().slice(0,10);
+  const add=(d,n)=>new Date(d.getTime()+n*864e5);
+  const MES=['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+  const DIA=['dom','lun','mar','mié','jue','vie','sáb'];
+  const yr=(d)=>d.getUTCFullYear()===2027?' 2027':'';
+  const fmt=(d)=>DIA[d.getUTCDay()]+' '+d.getUTCDate()+' '+MES[d.getUTCMonth()]+yr(d);
+  const fmtS=(d)=>d.getUTCDate()+' '+MES[d.getUTCMonth()]+yr(d);
+  const TODAY=D('2026-10-09'), AGREED=D('2026-10-16');
+  const HOL=new Set(['2026-11-16','2026-12-25','2027-01-01']);
+  const FZ=[D('2026-12-21'),D('2027-01-01')];
+  const isBD=(d)=>{const w=d.getUTCDay();if(w===0||w===6)return false;if(HOL.has(iso(d)))return false;if(d>=FZ[0]&&d<=FZ[1])return false;return true;};
+  const nextBD=(d)=>{while(!isBD(d))d=add(d,1);return d;};
+  const addBD=(d,n)=>{let x=d;while(n>0){x=add(x,1);if(isBD(x))n--;}return x;};
+  const nthBD=(s,n)=>{let x=nextBD(s),c=1;while(c<n){x=add(x,1);if(isBD(x))c++;}return x;};
+  const bdBetween=(a,b)=>{let c=0,x=a;while(x<b){x=add(x,1);if(isBD(x))c++;}return c;};
+  const DESIGN=3,DEV=24,QA=5,MINDEV=D('2026-11-09'),BASE=D('2026-12-18');
+  function sim(dec,form){
+    const ready=addBD(dec,form+DESIGN);
+    let v=new Date(ready);while(v.getUTCDay()!==4||!isBD(v))v=add(v,1);
+    let s=add(v,4);if(s<MINDEV)s=new Date(MINDEV);s=nextBD(s);
+    const devEnd=nthBD(s,DEV),qa=nextBD(add(devEnd,1)),end=nthBD(qa,QA);
+    return {ready,v,s,devEnd,qa,end,delay:Math.round((end-BASE)/864e5)};
+  }
+  const days=[];for(let d=D('2026-09-28');d<=D('2026-12-04');d=add(d,1))if(isBD(d))days.push(new Date(d));
+  const limitFor=(f)=>{let l=null;days.forEach(d=>{if(sim(d,f).end<=BASE)l=d;});return l;};
+  const slider=document.getElementById('dec'),sel=document.getElementById('form');
+  slider.max=days.length-1;
+  const idx=(d)=>days.findIndex(x=>+x===+d);
+  slider.value=idx(AGREED);
+
+  document.querySelectorAll('.quick button').forEach(b=>b.addEventListener('click',()=>{
+    const f=+sel.value,l=limitFor(f),g=b.dataset.go;
+    let t=g==='today'?TODAY:g==='agreed'?AGREED:l;
+    if(g==='plus1'&&l)t=nextBD(add(l,1));
+    if(t){slider.value=idx(t);render();}
+  }));
+
+  function gantt(dec,r){
+    const el=document.getElementById('gantt');el.innerHTML='';
+    const from=D('2026-10-01'),to=D('2027-02-26'),span=(to-from)/864e5+1,pct=(d)=>((d-from)/864e5)/span*100;
+    const mk=(label,fill)=>{const row=document.createElement('div');row.className='grow';row.innerHTML='<div class="lbl"></div><div class="track"></div>';row.firstChild.textContent=label;const tr=row.lastChild;
+      for(let d=new Date(from);d<=to;d=add(d,1))if(d.getUTCDay()===1){const w=document.createElement('i');w.className='wk';w.style.left=pct(d)+'%';tr.appendChild(w);}
+      const f=document.createElement('i');f.className='freeze';f.style.left=pct(FZ[0])+'%';f.style.width=(pct(add(FZ[1],1))-pct(FZ[0]))+'%';tr.appendChild(f);
+      fill(tr);el.appendChild(row);};
+    const bar=(tr,a,b,c)=>{const x=document.createElement('i');x.className='bar '+c;x.style.left=pct(a)+'%';x.style.width=Math.max(.5,pct(add(b,1))-pct(a))+'%';x.title=fmt(a)+' a '+fmt(b);tr.appendChild(x);};
+    const ms=(tr,d,c,t)=>{const x=document.createElement('i');x.className='ms '+c;x.style.left=pct(d)+'%';x.title=t+' '+fmt(d);tr.appendChild(x);};
+    const head=document.createElement('div');head.className='grow head';head.innerHTML='<div class="lbl"></div><div class="track"></div>';
+    for(let d=new Date(from);d<=to;d=add(d,1))if(d.getUTCDate()===1){const m=document.createElement('span');m.className='mon';m.style.left=pct(d)+'%';m.textContent=MES[d.getUTCMonth()]+yr(d);head.lastChild.appendChild(m);}
+    el.appendChild(head);
+    mk('Plan base',tr=>{bar(tr,D('2026-11-09'),D('2026-12-18'),'base');ms(tr,D('2026-12-18'),'end','Entrega');});
+    mk('Decisión el '+fmtS(dec),tr=>{ms(tr,dec,'dec','Decisión');bar(tr,add(dec,1),r.ready,'prep');bar(tr,r.s,r.end,'dev');ms(tr,r.end,'end','Entrega');});
+    mk('Metas de Cemex',tr=>{bar(tr,D('2026-12-01'),D('2026-12-18'),'goal');bar(tr,D('2027-01-04'),D('2027-01-29'),'goal');bar(tr,D('2027-02-01'),D('2027-02-26'),'goal');});
+  }
+
+  function render(){
+    const f=+sel.value,dec=days[+slider.value],r=sim(dec,f),l=limitFor(f);
+    document.getElementById('decLbl').textContent=fmt(dec)+(+dec===+TODAY?' · hoy':+dec===+AGREED?' · acordada':'');
+    document.getElementById('vLimit').textContent=l?fmtS(l):'ya pasó';
+    const m=l&&dec<=l?bdBetween(dec,l):-1;
+    document.getElementById('vMargin').textContent=m>=0?m+' días':'agotado';
+    document.getElementById('vEnd').textContent=fmtS(r.end);
+    document.getElementById('vDelay').textContent=r.delay<=0?'Sin retraso':'+'+r.delay+' días';
+    const late=r.delay>0;
+    ['k2','k3','k4'].forEach(k=>document.getElementById(k).classList.toggle('bad',k==='k2'?m<0:late));
+    ['k3','k4'].forEach(k=>document.getElementById(k).classList.toggle('ok',!late));
+    const st=[[dec,'Decisión de Cemex'],[r.ready,'Formalización y ajuste de diseño'],[r.v,'Validación del flujo'],[r.s,'Inicio de desarrollo'],[r.devEnd,'Fin de desarrollo'],[r.end,'Pruebas y entrega']];
+    document.getElementById('steps').innerHTML=st.map(s=>'<div class="step"><div class="d">'+fmtS(s[0])+'</div><div class="t">'+s[1]+'</div></div>').join('');
+    gantt(dec,r);
+  }
+  function table(){
+    const f=+sel.value,l=limitFor(f),tb=document.querySelector('#days tbody');tb.innerHTML='';
+    days.forEach((d,i)=>{const r=sim(d,f),tr=document.createElement('tr'),m=l&&d<=l?bdBetween(d,l):-1;
+      if(d<TODAY)tr.classList.add('past');if(+d===+TODAY)tr.classList.add('is-today');if(+d===+AGREED)tr.classList.add('agreed');
+      if(l&&i>0&&+days[i-1]===+l)tr.classList.add('limit');
+      tr.innerHTML='<td>'+fmt(d)+(+d===+TODAY?' · hoy':+d===+AGREED?' · acordada':'')+'</td><td>'+(m>=0?'<span class="pill '+(m<=5?'warn':'ok')+'">'+m+' días</span>':'<span class="pill bad">agotado</span>')+'</td><td>'+fmt(r.v)+'</td><td>'+fmt(r.s)+'</td><td>'+fmt(r.end)+'</td><td>'+(r.delay<=0?'<span class="pill ok">sin retraso</span>':'<span class="pill bad">+'+r.delay+' días</span>')+'</td>';
+      tb.appendChild(tr);});
+  }
+  slider.addEventListener('input',render);
+  sel.addEventListener('change',()=>{render();table();});
+  render();table();
+})();
+</script>
+</body></html>
