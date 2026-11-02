@@ -3,6 +3,7 @@
 import Badge from "@/components/ui/Badge";
 import BarList from "@/components/dashboard/BarList";
 import InsightPanel from "@/components/dashboard/InsightPanel";
+import LowSampleBadge, { MIN_RELIABLE_DEADLINES } from "@/components/dashboard/LowSampleBadge";
 import Skeleton from "@/components/ui/Skeleton";
 import ManualDeadlinesNotice from "@/components/dashboard/ManualDeadlinesNotice";
 import StatTile from "@/components/dashboard/StatTile";
@@ -84,7 +85,7 @@ export function DeadlinesTab() {
   if (monthsForCurrentPeriod.length === 0) {
     return (
       <div className="rounded-[var(--bp-radius-lg)] border border-dashed border-[var(--bp-border)] bg-[var(--bp-surface)] p-6 text-center text-[12px] text-[var(--bp-ink-soft)]">
-        No existe información para este periodo — el tracking empezó en julio 2026.
+        No existe información para este periodo — el tracking empezó en junio 2026.
       </div>
     );
   }
@@ -265,7 +266,10 @@ export function DeadlinesTab() {
                     ) : !boardConfigured ? (
                       <span className="text-[11px] text-[var(--bp-ink-soft)]">Sin tablero</span>
                     ) : assigned > 0 ? (
-                      `${complianceRate}%`
+                      <>
+                        {complianceRate}%
+                        <LowSampleBadge assigned={assigned} />
+                      </>
                     ) : (
                       "—"
                     )}
@@ -311,7 +315,7 @@ export function DeadlinesTab() {
       </div>
 
       <InsightPanel
-        alerts={atRisk.map((x) => ({ text: `${x.s.name} cumplió solo ${x.complianceRate}% de sus deadlines (${x.onTime}/${x.assigned}) según Jira.` }))}
+        alerts={atRisk.map((x) => ({ text: `${x.s.name} cumplió solo ${x.complianceRate}% de sus deadlines (${x.onTime}/${x.assigned}) según Jira${x.assigned < MIN_RELIABLE_DEADLINES ? `, con pocas incidencias con fecha (menos de ${MIN_RELIABLE_DEADLINES}): un lote tardío mueve mucho el porcentaje` : ""}.` }))}
         comments={deltaComments}
       />
     </div>

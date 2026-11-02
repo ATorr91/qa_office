@@ -65,7 +65,7 @@ export function isFutureMonth(mk: MonthKey): boolean {
 }
 
 /** Nothing gets tracked before this month — the whole dashboard treats earlier months as "no data", not zero. */
-export const TRACKING_START_MONTH: MonthKey = "2026-07";
+export const TRACKING_START_MONTH: MonthKey = "2026-06";
 
 export function isBeforeTrackingStart(mk: MonthKey): boolean {
   return mk < TRACKING_START_MONTH;

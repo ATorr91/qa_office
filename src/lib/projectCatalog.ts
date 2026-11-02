@@ -244,6 +244,22 @@ export function projectAssignmentsFor(strategistId: string): ProjectAssignment[]
     }));
 }
 
+/** The active projects that have Jira boards, grouped by Jira project key, with the strategists assigned to each. */
+export function activeJiraTargets(): { key: string; projects: CatalogProject[]; owners: string[] }[] {
+  const byKey = new Map<string, CatalogProject[]>();
+  for (const p of PROJECT_CATALOG) {
+    if (p.status !== "active") continue;
+    for (const k of p.jiraKeys) byKey.set(k, [...(byKey.get(k) ?? []), p]);
+  }
+  return [...byKey.entries()].map(([key, projects]) => {
+    const owners = new Set<string>();
+    for (const [id, list] of Object.entries(ASSIGNMENTS)) {
+      if (list.some((a) => projects.includes(find(a)))) owners.add(id);
+    }
+    return { key, projects, owners: [...owners] };
+  });
+}
+
 /** Account → strategists, taken from who is assigned to that account's projects. Null when the account has no project in the catalog. */
 export function accountOwnersFromProjects(accountKey: string): string[] | null {
   const projects = PROJECT_CATALOG.filter((p) => p.account === accountKey);

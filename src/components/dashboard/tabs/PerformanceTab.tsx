@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import BarList from "@/components/dashboard/BarList";
+import LowSampleBadge from "@/components/dashboard/LowSampleBadge";
 import ManualDeadlinesNotice from "@/components/dashboard/ManualDeadlinesNotice";
 import StatTile from "@/components/dashboard/StatTile";
 import StrategistAvatar from "@/components/dashboard/StrategistAvatar";
@@ -131,6 +132,12 @@ export function PerformanceTab() {
                     <td key={c.key} className="px-3 py-2.5 text-right font-mono">
                       {c.value !== null ? `${c.value}%` : c.key === "peer" ? "NA" : "—"}
                       {c.key === "deadlines" && !getSources(s.id).jira && <span title="Se captura a mano: no usa Jira"> *</span>}
+                      {c.key === "deadlines" && r.deadlinesAssigned > 0 && (
+                        <>
+                          <span className="ml-1 text-[10px] text-[var(--bp-ink-soft)]">{r.deadlinesOnTime}/{r.deadlinesAssigned}</span>
+                          <LowSampleBadge assigned={r.deadlinesAssigned} />
+                        </>
+                      )}
                     </td>
                   ))}
                   <td className="px-3 py-2.5 text-right font-mono">

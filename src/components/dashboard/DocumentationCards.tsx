@@ -182,11 +182,20 @@ export function DocumentationCards({
       source: "Jira · tablero(s) de cada estratega",
       badge: jiraBadge,
       measures: "Incidencias asignadas a cada estratega con fecha límite, en los proyectos de Jira que se configuran en Admin.",
-      how: "A tiempo = cerrada el día de su fecha límite o antes; abierta y ya vencida cuenta como no cumplida. Las incidencias sin fecha límite no cuentan (se muestran aparte). Quien no usa Jira se captura a mano: ver el aviso de arriba.",
+      how: "A tiempo = cerrada hasta 1 día después de su fecha límite (el equipo suele cerrar al día siguiente); abierta y con ese día de gracia ya vencido cuenta como no cumplida. Con menos de 20 incidencias con fecha se marca «pocos datos»: un solo lote tardío cambia mucho el porcentaje. Las incidencias sin fecha límite no cuentan (se muestran aparte). Quien no usa Jira se captura a mano: ver el aviso de arriba.",
       ctas: [
         ...(jiraUrl ? [{ label: "Abrir Jira", href: jiraUrl, external: true, primary: true }] : []),
         { label: "Configurar tableros", href: ADMIN_HREF },
       ],
+    },
+    {
+      id: "sprint",
+      title: "Avance del sprint",
+      source: "Jira · sprint activo del tablero de cada proyecto activo (en vivo)",
+      badge: jiraBadge,
+      measures: "Cuánto del sprint que corre hoy ya está terminado, por proyecto y por épica. Solo cuenta lo que está en ese sprint: no el acumulado del proyecto ni de sprints anteriores.",
+      how: "% terminado = tickets en estado Finalizado ÷ tickets del sprint (las sub-tareas y las épicas no cuentan). Se compara con el % de días hábiles del sprint que ya pasaron: al día si va a 10 pts o menos por debajo, atrasado hasta 30 pts, en riesgo más allá. Si Jira sigue marcando activo un sprint que ya terminó, se avisa en lugar de mostrarlo. Se actualiza solo cada minuto.",
+      ctas: [...(jiraUrl ? [{ label: "Abrir Jira", href: jiraUrl, external: true, primary: true }] : [])],
     },
   ];
 
@@ -235,7 +244,7 @@ export function DocumentationCards({
         <ul className="mt-2 flex list-disc flex-col gap-1 pl-5 text-[12px] leading-relaxed text-[var(--bp-ink)]">
           <li>Promedio simple de las métricas que sí tienen dato: peer review, OKRs y KPIs, deadlines, bitácoras y QA.</li>
           <li>Una métrica sin dato no cuenta y no baja el promedio. Si no hay ninguna, se muestra «Sin información disponible».</li>
-          <li>En el periodo anual se combinan los meses con dato desde julio de 2026, que es cuando empezó el seguimiento.</li>
+          <li>En el periodo anual se combinan los meses con dato desde junio de 2026, que es cuando empezó el seguimiento (los peer reviews de junio ya están cargados).</li>
           <li>Los datos en vivo (Jira, la hoja de bitácoras, los correos de QA y las encuestas de Figma) siempre mandan; un valor manual solo se usa cuando la fuente en vivo no tiene dato o la persona no la usa.</li>
           <li>NPS y CSAT se muestran en sus propios tabs, en el grupo «Percepción del cliente», y la Autoevaluación en el suyo: ninguno entra a este promedio.</li>
         </ul>

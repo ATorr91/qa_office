@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import Badge from "@/components/ui/Badge";
 
-export type SourceTab = "desempeno" | "peer" | "okr" | "deadlines" | "bitacoras" | "qa" | "nps" | "csat" | "autoevaluacion" | "historial";
+export type SourceTab = "desempeno" | "peer" | "okr" | "deadlines" | "sprint" | "bitacoras" | "qa" | "nps" | "csat" | "autoevaluacion" | "historial";
 
 interface SourceLinks {
   bitacorasSheetUrl: string | null;
@@ -50,7 +50,12 @@ const NOTES: Record<SourceTab, Note> = {
   },
   deadlines: {
     description:
-      "Incidencias con fecha límite asignadas a cada estratega en Jira. Cuenta como a tiempo la que se cierra el día de su fecha límite o antes; las que no tienen fecha límite no cuentan y se muestran aparte. Se consulta en vivo cada vez que abres el panel.",
+      "Incidencias con fecha límite asignadas a cada estratega en Jira. Cuenta como a tiempo la que se cierra hasta 1 día después de su fecha límite; las que no tienen fecha límite no cuentan y se muestran aparte. Se consulta en vivo cada vez que abres el panel.",
+    links: (l) => (l?.jiraUrl ? [{ label: "Abrir Jira", href: l.jiraUrl, external: true }] : []),
+  },
+  sprint: {
+    description:
+      "Avance del sprint que está corriendo hoy en el tablero de Jira de cada proyecto activo: solo los tickets de ese sprint (sin sub-tareas y sin lo acumulado de sprints anteriores), por proyecto y por épica. Se compara el % terminado con el % de días hábiles del sprint que ya pasaron, para saber si va al día. Se lee en vivo y se actualiza solo cada minuto.",
     links: (l) => (l?.jiraUrl ? [{ label: "Abrir Jira", href: l.jiraUrl, external: true }] : []),
   },
   bitacoras: {

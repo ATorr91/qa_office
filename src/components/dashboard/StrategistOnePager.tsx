@@ -5,6 +5,7 @@ import type { ReactNode } from "react";
 import EmptyPeriodHint from "@/components/dashboard/EmptyPeriodHint";
 import ManualDeadlinesNotice from "@/components/dashboard/ManualDeadlinesNotice";
 import ImportantComments from "@/components/dashboard/ImportantComments";
+import LowSampleBadge from "@/components/dashboard/LowSampleBadge";
 import StrategistAvatar from "@/components/dashboard/StrategistAvatar";
 import TrendSparkline from "@/components/dashboard/TrendSparkline";
 import { scoreColor } from "@/components/dashboard/admin/ScoreBreakdown";
@@ -309,6 +310,7 @@ export function StrategistOnePager({ strategistId }: { strategistId: string }) {
             <li>
               <span className="text-[var(--bp-ink-soft)]">Deadlines:</span>{" "}
               {r.deadlineComplianceRate !== null ? `${r.deadlineComplianceRate}% (${detail.deadlines})` : detail.deadlines}
+              <LowSampleBadge assigned={r.deadlinesAssigned} />
             </li>
             {jiraStatus && (
               <li>

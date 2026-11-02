@@ -48,7 +48,7 @@ export interface JiraDeadlinesResult {
   unconfiguredEmails: string[];
 }
 
-interface JiraCreds {
+export interface JiraCreds {
   baseUrl: string;
   email: string;
   apiToken: string;
@@ -60,7 +60,7 @@ export interface StrategistBoard {
   projectKeys: string[];
 }
 
-function readCreds(): JiraCreds | null {
+export function readCreds(): JiraCreds | null {
   const baseUrl = process.env.JIRA_BASE_URL;
   const email = process.env.JIRA_EMAIL;
   const apiToken = process.env.JIRA_API_TOKEN;
@@ -72,7 +72,7 @@ function authHeader(creds: JiraCreds): string {
   return `Basic ${Buffer.from(`${creds.email}:${creds.apiToken}`).toString("base64")}`;
 }
 
-async function jiraFetch(creds: JiraCreds, path: string, body?: object): Promise<unknown> {
+export async function jiraFetch(creds: JiraCreds, path: string, body?: object): Promise<unknown> {
   const res = await fetch(`${creds.baseUrl}${path}`, {
     method: body ? "POST" : "GET",
     headers: {
@@ -90,12 +90,20 @@ async function jiraFetch(creds: JiraCreds, path: string, body?: object): Promise
   return res.json();
 }
 
+/** Days after a ticket's due date during which closing it still counts as on time. */
+export const DEADLINE_GRACE_DAYS = 1;
+
+/** "YYYY-MM-DD" plus a number of calendar days. */
+function addDays(day: string, n: number): string {
+  return new Date(Date.parse(`${day}T00:00:00Z`) + n * 86_400_000).toISOString().slice(0, 10);
+}
+
 /** Today's date ("YYYY-MM-DD") in the team's timezone, so a server running in UTC doesn't flip days at 6pm local. */
-function todayInMexico(): string {
+export function todayInMexico(): string {
   return new Date().toLocaleDateString("en-CA", { timeZone: "America/Mexico_City" });
 }
 
-async function verifyCreds(creds: JiraCreds): Promise<void> {
+export async function verifyCreds(creds: JiraCreds): Promise<void> {
   const res = await fetch(`${creds.baseUrl}/rest/api/3/myself`, {
     headers: { Authorization: authHeader(creds), Accept: "application/json" },
     cache: "no-store",
@@ -272,16 +280,17 @@ export async function fetchJiraDeadlines(boards: StrategistBoard[]): Promise<Jir
           // Compare calendar days, not timestamps: an issue resolved any time on its due date is on time
           // (a midnight cutoff would mark same-day closes as late). Jira returns resolutiondate in the
           // account's own offset, so its first 10 characters are the day the person actually closed it.
+          // The team often closes a ticket the morning after it was due, so closing within DEADLINE_GRACE_DAYS of the due date still counts.
+          const lastOnTimeDay = addDays(dueDate, DEADLINE_GRACE_DAYS);
           if (statusKey === "done") {
             const resolvedDay = issue.fields.resolutiondate ? issue.fields.resolutiondate.slice(0, 10) : todayIso;
             bucket.assigned += 1;
-            if (resolvedDay <= dueDate) bucket.onTime += 1;
-          } else if (dueDate < todayIso) {
-            // Deadline already passed and the issue is still open — counts as assigned, missed.
+            if (resolvedDay <= lastOnTimeDay) bucket.onTime += 1;
+          } else if (lastOnTimeDay < todayIso) {
+            // The grace period is over and the issue is still open — counts as assigned, missed.
             bucket.assigned += 1;
           }
-          // Issues not yet done whose due date hasn't arrived yet are excluded — their
-          // outcome can't be judged yet.
+          // Issues not yet done that can still be closed on time are excluded — their outcome can't be judged yet.
         }
       }),
     );

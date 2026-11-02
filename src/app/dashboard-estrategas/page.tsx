@@ -13,6 +13,7 @@ import OkrKpiTab from "@/components/dashboard/tabs/OkrKpiTab";
 import PeerReviewsTab from "@/components/dashboard/tabs/PeerReviewsTab";
 import PerformanceTab from "@/components/dashboard/tabs/PerformanceTab";
 import QaTab from "@/components/dashboard/tabs/QaTab";
+import SprintProgressTab from "@/components/dashboard/tabs/SprintProgressTab";
 import { useDashboardFilters } from "@/lib/dashboardFilters";
 
 const TABS = [
@@ -20,6 +21,7 @@ const TABS = [
   { value: "peer", label: "Peer reviews" },
   { value: "okr", label: "OKRs y KPIs" },
   { value: "deadlines", label: "Deadlines" },
+  { value: "sprint", label: "Avance del sprint" },
   { value: "bitacoras", label: "Bitácoras" },
   { value: "qa", label: "Calificación QA" },
   { value: "autoevaluacion", label: "Autoevaluación" },
@@ -36,6 +38,7 @@ const PANELS: { value: Tab; Component: () => React.JSX.Element | null }[] = [
   { value: "peer", Component: PeerReviewsTab },
   { value: "okr", Component: OkrKpiTab },
   { value: "deadlines", Component: DeadlinesTab },
+  { value: "sprint", Component: SprintProgressTab },
   { value: "bitacoras", Component: BitacorasTab },
   { value: "qa", Component: QaTab },
   { value: "nps", Component: NpsTab },
@@ -126,8 +129,8 @@ export default function DashboardEstrategasPage() {
         {PANELS.map(({ value, Component }) => (
           <div key={value} role="tabpanel" id={`panel-${value}`} aria-labelledby={`tab-${value}`} className={`mt-5 ${tab === value ? "flex flex-col gap-4" : "hidden"}`}>
             <SourceNote tab={value as SourceTab} />
-            {/* Autoevaluación asks the server for admin-only data and polls it, so it only mounts while it is the open tab. */}
-            {(value !== "autoevaluacion" || tab === "autoevaluacion") && <Component />}
+            {/* Autoevaluación (admin-only data) and Avance del sprint (live Jira polling) only mount while they are the open tab. */}
+            {((value !== "autoevaluacion" && value !== "sprint") || tab === value) && <Component />}
           </div>
         ))}
       </div>
