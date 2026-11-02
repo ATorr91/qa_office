@@ -1,15 +1,19 @@
 "use client";
 
+import Link from "next/link";
 import BarList from "@/components/dashboard/BarList";
+import ManualDeadlinesNotice from "@/components/dashboard/ManualDeadlinesNotice";
 import StatTile from "@/components/dashboard/StatTile";
 import StrategistAvatar from "@/components/dashboard/StrategistAvatar";
 import TrendSparkline from "@/components/dashboard/TrendSparkline";
 import { useDashboardFilters } from "@/lib/dashboardFilters";
-import { getEffectiveRecordForMonth, useEffectiveRecords, useStrategistDataInputs } from "@/lib/strategistRecords";
+import { getEffectiveRecordForMonth, performanceComponents, useEffectiveRecords, useStrategistDataInputs, useStrategistRecords } from "@/lib/strategistRecords";
 import { getMonthShortLabel, monthsInYear, periodYear } from "@/lib/strategists";
 
 const AT_RISK_THRESHOLD = 70;
 const NO_DATA_LABEL = "Sin información disponible";
+// Same five inputs, same order, as the average they roll up into (see performanceComponents).
+const COMPONENT_LABELS = ["Peer review", "OKRs y KPIs", "Deadlines", "Bitácoras", "QA"];
 
 function toneFor(score: number): "good" | "warning" | "danger" {
   if (score >= 85) return "good";
@@ -20,7 +24,8 @@ function toneFor(score: number): "good" | "warning" | "danger" {
 export function PerformanceTab() {
   const rows = useEffectiveRecords();
   const { period } = useDashboardFilters();
-  const { filteredStrategists, recordsByStrategist, jiraDeadlines } = useStrategistDataInputs();
+  const { filteredStrategists, recordsByStrategist, jiraDeadlines, bitacorasSync, externalScores } = useStrategistDataInputs();
+  const { getSources } = useStrategistRecords();
 
   const withData = rows.filter((x) => x.r.performanceScore !== null).sort((a, b) => b.r.performanceScore! - a.r.performanceScore!);
 
@@ -30,7 +35,7 @@ export function PerformanceTab() {
 
   const teamTrend = monthsInYear(periodYear(period)).map((m) => {
     const scores = filteredStrategists
-      .map((s) => getEffectiveRecordForMonth(s, m, recordsByStrategist, jiraDeadlines).performanceScore)
+      .map((s) => getEffectiveRecordForMonth(s, m, recordsByStrategist, jiraDeadlines, bitacorasSync, externalScores).performanceScore)
       .filter((v): v is number => v !== null);
     return scores.length > 0 ? { label: getMonthShortLabel(m), value: Math.round(scores.reduce((a, b) => a + b, 0) / scores.length) } : null;
   }).filter((v): v is NonNullable<typeof v> => v !== null);
@@ -42,7 +47,7 @@ export function PerformanceTab() {
           label="Desempeño promedio del equipo"
           value={teamAvg !== null ? `${teamAvg}%` : NO_DATA_LABEL}
           tone={teamAvg !== null ? toneFor(teamAvg) : "neutral"}
-          sublabel="Promedio de peer review, OKR, KPI, deadlines, bitácoras, QA y NPS"
+          sublabel="Promedio de peer review, OKRs y KPIs, deadlines, bitácoras y QA. NPS y CSAT se ven aparte."
         />
         <div className="bp-row-in flex flex-col gap-1.5 rounded-[var(--bp-radius-lg)] border border-[var(--bp-border)] bg-[var(--bp-surface)] p-4">
           <div className="text-[11px] font-medium uppercase tracking-[0.04em] text-[var(--bp-ink-soft)]">Mejor desempeño</div>
@@ -73,10 +78,10 @@ export function PerformanceTab() {
       </div>
 
       <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
-        <div className="rounded-[var(--bp-radius-lg)] border border-[var(--bp-border)] bg-[var(--bp-surface)] p-4">
+        <div className="rounded-[var(--bp-radius-lg)] border border-[var(--bp-border)] bg-[var(--bp-surface)] p-4 flex flex-col">
           <h3 className="text-[13px] font-semibold text-[var(--bp-ink)]">Tendencia de desempeño del equipo</h3>
           <p className="mt-0.5 text-[11px] text-[var(--bp-ink-soft)]">Promedio del equipo por mes, para el año seleccionado.</p>
-          <div className="mt-3">
+          <div className="mt-3 min-h-[160px] flex-1">
             <TrendSparkline points={teamTrend} />
           </div>
         </div>
@@ -94,20 +99,23 @@ export function PerformanceTab() {
       </div>
 
       <div className="overflow-x-auto rounded-[var(--bp-radius-md)] border border-[var(--bp-border)]">
-        <table className="w-full min-w-[560px] border-collapse text-left text-[12px]">
+        <table className="w-full min-w-[760px] border-collapse text-left text-[12px]">
           <thead>
             <tr className="border-b border-[var(--bp-border)] bg-[var(--bp-surface-alt)] text-[10px] uppercase tracking-[0.04em] text-[var(--bp-ink-soft)]">
               <th className="px-3 py-2">Estratega</th>
-              <th className="px-3 py-2 text-right">Peer review</th>
-              <th className="px-3 py-2 text-right">OKR</th>
-              <th className="px-3 py-2 text-right">KPI</th>
+              {COMPONENT_LABELS.map((label) => (
+                <th key={label} className="px-3 py-2 text-right">
+                  {label}
+                </th>
+              ))}
               <th className="px-3 py-2 text-right">Desempeño</th>
+              <th className="px-3 py-2 text-right">Perfil</th>
             </tr>
           </thead>
           <tbody>
             {rows.length === 0 ? (
               <tr>
-                <td colSpan={5} className="px-3 py-6 text-center text-[12px] text-[var(--bp-ink-soft)]">
+                <td colSpan={COMPONENT_LABELS.length + 3} className="px-3 py-6 text-center text-[12px] text-[var(--bp-ink-soft)]">
                   Aún no hay estrategas para este filtro.
                 </td>
               </tr>
@@ -115,13 +123,26 @@ export function PerformanceTab() {
               rows.map(({ s, r }, i) => (
                 <tr key={s.id} className="bp-row-in border-b border-[var(--bp-border)] last:border-0" style={{ animationDelay: `${Math.min(i, 12) * 25}ms` }}>
                   <td className="px-3 py-2.5">
-                    <StrategistAvatar strategist={s} />
+                    <Link href={`/dashboard-estrategas/perfil/${s.id}`} className="block rounded-[var(--bp-radius-sm)] hover:opacity-80" title={`Ver el perfil de ${s.name}`}>
+                      <StrategistAvatar strategist={s} />
+                    </Link>
                   </td>
-                  <td className="px-3 py-2.5 text-right font-mono">{r.peerReviewScore !== null ? `${r.peerReviewScore}%` : "—"}</td>
-                  <td className="px-3 py-2.5 text-right font-mono">{r.okrCompletion !== null ? `${r.okrCompletion}%` : "—"}</td>
-                  <td className="px-3 py-2.5 text-right font-mono">{r.kpiCompliance !== null ? `${r.kpiCompliance}%` : "—"}</td>
+                  {performanceComponents(r).map((c) => (
+                    <td key={c.key} className="px-3 py-2.5 text-right font-mono">
+                      {c.value !== null ? `${c.value}%` : c.key === "peer" ? "NA" : "—"}
+                      {c.key === "deadlines" && !getSources(s.id).jira && <span title="Se captura a mano: no usa Jira"> *</span>}
+                    </td>
+                  ))}
                   <td className="px-3 py-2.5 text-right font-mono">
                     {r.performanceScore !== null ? `${r.performanceScore}%` : <span className="text-[11px] text-[var(--bp-ink-soft)]">{NO_DATA_LABEL}</span>}
+                  </td>
+                  <td className="px-3 py-2.5 text-right">
+                    <Link
+                      href={`/dashboard-estrategas/perfil/${s.id}`}
+                      className="bp-tap inline-flex items-center gap-1 rounded-[var(--bp-radius-sm)] border border-[var(--bp-border)] px-2 py-1 text-[11px] font-semibold text-[var(--bp-ink)] transition-colors duration-[var(--bp-dur)] hover:border-[var(--bp-blue)]"
+                    >
+                      Ver perfil <span aria-hidden>→</span>
+                    </Link>
                   </td>
                 </tr>
               ))
@@ -129,6 +150,8 @@ export function PerformanceTab() {
           </tbody>
         </table>
       </div>
+
+      <ManualDeadlinesNotice compact />
 
     </div>
   );

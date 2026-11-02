@@ -8,7 +8,7 @@ export default function EstrategasLayout({ children }: { children: React.ReactNo
     <TrendsProvider>
       <KnowledgeProvider>
         <div className="min-h-screen bg-[var(--bp-surface-alt)]">
-          <header className="flex items-center justify-between border-b border-[var(--bp-border)] bg-[var(--bp-surface)] px-5 py-3 md:px-8">
+          <header className="flex items-center justify-between border-b border-[var(--bp-border)] bg-[var(--bp-surface)] bp-gutter py-3">
             <Link href="/" aria-label="Volver al portal">
               <Logo variant="dark" style={{ transform: "scale(0.65)", transformOrigin: "left center" }} />
             </Link>
@@ -20,7 +20,7 @@ export default function EstrategasLayout({ children }: { children: React.ReactNo
               Métricas de Estrategas
             </div>
           </header>
-          <main className="px-5 py-6 md:px-8 md:py-7">{children}</main>
+          <main className="bp-gutter py-6 md:py-7">{children}</main>
         </div>
       </KnowledgeProvider>
     </TrendsProvider>

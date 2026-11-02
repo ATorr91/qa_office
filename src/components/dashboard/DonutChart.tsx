@@ -20,18 +20,19 @@ export function DonutChart({
   const total = segments.reduce((acc, s) => acc + s.value, 0) || 1;
   const radius = (size - strokeWidth) / 2;
   const circumference = 2 * Math.PI * radius;
-  let offsetAcc = 0;
+  // Each segment starts where the previous one ended.
+  const offsets = segments.reduce<number[]>((acc, s, i) => [...acc, i === 0 ? 0 : acc[i - 1] + (segments[i - 1].value / total) * circumference], []);
 
   return (
     <div className="flex items-center gap-4">
       <div className="relative shrink-0" style={{ width: size, height: size }}>
         <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="-rotate-90">
           <circle cx={size / 2} cy={size / 2} r={radius} fill="none" stroke="var(--bp-surface-alt)" strokeWidth={strokeWidth} />
-          {segments.map((s) => {
+          {segments.map((s, i) => {
             const frac = s.value / total;
             const dash = frac * circumference;
             const gap = circumference - dash;
-            const circle = (
+            return (
               <circle
                 key={s.label}
                 cx={size / 2}
@@ -41,11 +42,9 @@ export function DonutChart({
                 stroke={s.color}
                 strokeWidth={strokeWidth}
                 strokeDasharray={`${dash} ${gap}`}
-                strokeDashoffset={-offsetAcc}
+                strokeDashoffset={-offsets[i]}
               />
             );
-            offsetAcc += dash;
-            return circle;
           })}
         </svg>
         {(centerLabel || centerValue) && (

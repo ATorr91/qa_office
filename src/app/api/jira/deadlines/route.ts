@@ -11,11 +11,13 @@ function parseProjectKeys(raw: string): string[] {
 }
 
 export async function POST(request: NextRequest) {
-  const body = (await request.json().catch(() => ({}))) as { boards?: Record<string, string> };
+  const body = (await request.json().catch(() => ({}))) as { boards?: Record<string, string>; skip?: string[] };
   const overrides = body.boards ?? {};
+  // People who don't use Jira (their deadlines are typed by hand) aren't queried at all.
+  const skip = new Set(Array.isArray(body.skip) ? body.skip : []);
   const globalDefault = process.env.JIRA_PROJECT_KEY ?? "";
 
-  const boards: StrategistBoard[] = STRATEGISTS.map((s) => {
+  const boards: StrategistBoard[] = STRATEGISTS.filter((s) => !skip.has(s.id)).map((s) => {
     const override = parseProjectKeys(overrides[s.id] ?? "");
     const projectKeys = override.length > 0 ? override : globalDefault ? [globalDefault] : [];
     return { email: s.email, projectKeys };

@@ -16,7 +16,21 @@ export interface IssueStatusCount {
   done: number;
   inProgress: number;
   todo: number;
+  /** Not done and already past their due date. */
+  overdueOpen: number;
+  /** No due date, so they can't count toward deadline compliance. */
+  noDueDate: number;
 }
+
+/** What one person has in one Jira project: tickets assigned to them by status, and tickets they created (the strategist writes them, developers execute). */
+export interface ProjectIssueStats extends IssueStatusCount {
+  name: string;
+  /** Tickets created by this person in the project, and how many of them are still open. */
+  reported: number;
+  reportedOpen: number;
+}
+
+export type ProjectsByEmail = Record<string, Record<string, ProjectIssueStats>>;
 
 export type IssueStatusByEmail = Record<string, IssueStatusCount>;
 
@@ -28,6 +42,8 @@ export interface JiraDeadlinesResult {
   byEmail: DeadlinesByEmail;
   /** All issues assigned to each strategist on their board, by status — regardless of due date. */
   issueStatusByEmail: IssueStatusByEmail;
+  /** The same, split by Jira project key, plus the tickets each person created. */
+  projectsByEmail: ProjectsByEmail;
   /** Strategists with no Jira project key configured (no per-person override, no global fallback) — not an error, just not wired up yet. */
   unconfiguredEmails: string[];
 }
@@ -74,6 +90,24 @@ async function jiraFetch(creds: JiraCreds, path: string, body?: object): Promise
   return res.json();
 }
 
+/** Today's date ("YYYY-MM-DD") in the team's timezone, so a server running in UTC doesn't flip days at 6pm local. */
+function todayInMexico(): string {
+  return new Date().toLocaleDateString("en-CA", { timeZone: "America/Mexico_City" });
+}
+
+async function verifyCreds(creds: JiraCreds): Promise<void> {
+  const res = await fetch(`${creds.baseUrl}/rest/api/3/myself`, {
+    headers: { Authorization: authHeader(creds), Accept: "application/json" },
+    cache: "no-store",
+  });
+  if (res.status === 401 || res.status === 403) {
+    throw new Error(
+      `Jira rechazó las credenciales (${res.status}). Revisa JIRA_API_TOKEN, JIRA_EMAIL y JIRA_BASE_URL en las variables de entorno; el token puede estar vencido o no corresponder a ese correo.`,
+    );
+  }
+  if (!res.ok) throw new Error(`Jira respondió ${res.status} ${res.statusText} al validar las credenciales.`);
+}
+
 interface JiraUserSearchHit {
   accountId: string;
   emailAddress?: string;
@@ -96,7 +130,9 @@ async function resolveAccountIds(creds: JiraCreds, emails: string[]): Promise<Ma
 
 interface JiraIssue {
   fields: {
+    project: { key: string; name: string };
     assignee: { accountId: string } | null;
+    reporter?: { accountId: string } | null;
     duedate: string | null;
     resolutiondate: string | null;
     status: { statusCategory: { key: string } };
@@ -119,7 +155,7 @@ async function fetchAllIssues(creds: JiraCreds, projectKey: string, accountIds: 
   for (;;) {
     const page = (await jiraFetch(creds, "/rest/api/3/search/jql", {
       jql,
-      fields: ["assignee", "duedate", "resolutiondate", "status"],
+      fields: ["project", "assignee", "duedate", "resolutiondate", "status"],
       maxResults: 100,
       ...(nextPageToken ? { nextPageToken } : {}),
     })) as JiraSearchPage;
@@ -129,6 +165,14 @@ async function fetchAllIssues(creds: JiraCreds, projectKey: string, accountIds: 
   }
   return issues;
 }
+
+/** How many tickets match a JQL, without downloading them (the strategists wrote thousands, so listing them would be slow). */
+async function countIssues(creds: JiraCreds, jql: string): Promise<number> {
+  const res = (await jiraFetch(creds, "/rest/api/3/search/approximate-count", { jql })) as { count: number };
+  return res.count;
+}
+
+const emptyStatus = (): IssueStatusCount => ({ total: 0, done: 0, inProgress: 0, todo: 0, overdueOpen: 0, noDueDate: 0 });
 
 /**
  * Fetches deadline compliance per strategist from Jira, bucketed by month. Each strategist can
@@ -141,9 +185,11 @@ export async function fetchJiraDeadlines(boards: StrategistBoard[]): Promise<Jir
   const fetchedAt = new Date().toISOString();
   const byEmail: DeadlinesByEmail = {};
   const issueStatusByEmail: IssueStatusByEmail = {};
+  const projectsByEmail: ProjectsByEmail = {};
   for (const b of boards) {
     byEmail[b.email] = {};
-    issueStatusByEmail[b.email] = { total: 0, done: 0, inProgress: 0, todo: 0 };
+    issueStatusByEmail[b.email] = emptyStatus();
+    projectsByEmail[b.email] = {};
   }
 
   const configuredBoards = boards.filter((b) => b.projectKeys.length > 0);
@@ -151,16 +197,20 @@ export async function fetchJiraDeadlines(boards: StrategistBoard[]): Promise<Jir
 
   const creds = readCreds();
   if (!creds) {
-    return { configured: false, error: null, fetchedAt, boardUrl: null, byEmail, issueStatusByEmail, unconfiguredEmails };
+    return { configured: false, error: null, fetchedAt, boardUrl: null, byEmail, issueStatusByEmail, projectsByEmail, unconfiguredEmails };
   }
   if (configuredBoards.length === 0) {
-    return { configured: true, error: null, fetchedAt, boardUrl: null, byEmail, issueStatusByEmail, unconfiguredEmails };
+    return { configured: true, error: null, fetchedAt, boardUrl: null, byEmail, issueStatusByEmail, projectsByEmail, unconfiguredEmails };
   }
 
   const boardUrl = `${creds.baseUrl}/jira/software/projects/${configuredBoards[0].projectKeys[0]}/boards`;
 
   try {
-    const today = Date.now();
+    const todayIso = todayInMexico();
+
+    // Jira answers user/search and search/jql with 200 and an empty list when the token is invalid,
+    // so without this check a bad credential would show up as "no issues". /myself does return 401.
+    await verifyCreds(creds);
 
     // Resolve every configured strategist's Jira accountId once, then group by project key so a
     // strategist listed on several projects gets queried (and merged) across all of them.
@@ -180,6 +230,20 @@ export async function fetchJiraDeadlines(boards: StrategistBoard[]): Promise<Jir
       [...byProjectKey.entries()].map(async ([projectKey, accountIds]) => {
         const issues = await fetchAllIssues(creds, projectKey, accountIds);
 
+        // Tickets each person created in the project (a strategist is the product owner who writes them) and how many are still open.
+        await Promise.all(
+          accountIds.map(async (accountId) => {
+            const email = emailByAccountId.get(accountId);
+            if (!email) return;
+            const base = `project = "${projectKey}" AND reporter = "${accountId}"`;
+            const [reported, reportedOpen] = await Promise.all([countIssues(creds, base), countIssues(creds, `${base} AND statusCategory != Done`)]);
+            if (reported === 0) return;
+            const stats = (projectsByEmail[email][projectKey] ??= { ...emptyStatus(), name: projectKey, reported: 0, reportedOpen: 0 });
+            stats.reported = reported;
+            stats.reportedOpen = reportedOpen;
+          }),
+        );
+
         for (const issue of issues) {
           const accountId = issue.fields.assignee?.accountId;
           if (!accountId) continue;
@@ -187,25 +251,32 @@ export async function fetchJiraDeadlines(boards: StrategistBoard[]): Promise<Jir
           if (!email) continue;
 
           const statusKey = issue.fields.status.statusCategory.key;
-          const statusBucket = issueStatusByEmail[email];
-          statusBucket.total += 1;
-          if (statusKey === "done") statusBucket.done += 1;
-          else if (statusKey === "indeterminate") statusBucket.inProgress += 1;
-          else statusBucket.todo += 1;
-
           const dueDate = issue.fields.duedate;
+          const overdueOpen = statusKey !== "done" && !!dueDate && dueDate < todayIso;
+          const projectStats = (projectsByEmail[email][projectKey] ??= { ...emptyStatus(), name: issue.fields.project.name, reported: 0, reportedOpen: 0 });
+          projectStats.name = issue.fields.project.name;
+          for (const bucketOf of [issueStatusByEmail[email], projectStats]) {
+            bucketOf.total += 1;
+            if (statusKey === "done") bucketOf.done += 1;
+            else if (statusKey === "indeterminate") bucketOf.inProgress += 1;
+            else bucketOf.todo += 1;
+            if (overdueOpen) bucketOf.overdueOpen += 1;
+            if (!dueDate) bucketOf.noDueDate += 1;
+          }
+
           if (!dueDate) continue;
 
           const month = monthFromDate(dueDate);
-          const isDone = statusKey === "done";
-          const dueMs = new Date(`${dueDate}T00:00:00`).getTime();
           const bucket = (byEmail[email][month] ??= { assigned: 0, onTime: 0 });
 
-          if (isDone) {
-            const resolutionMs = issue.fields.resolutiondate ? new Date(issue.fields.resolutiondate).getTime() : today;
+          // Compare calendar days, not timestamps: an issue resolved any time on its due date is on time
+          // (a midnight cutoff would mark same-day closes as late). Jira returns resolutiondate in the
+          // account's own offset, so its first 10 characters are the day the person actually closed it.
+          if (statusKey === "done") {
+            const resolvedDay = issue.fields.resolutiondate ? issue.fields.resolutiondate.slice(0, 10) : todayIso;
             bucket.assigned += 1;
-            if (resolutionMs <= dueMs) bucket.onTime += 1;
-          } else if (dueMs < today) {
+            if (resolvedDay <= dueDate) bucket.onTime += 1;
+          } else if (dueDate < todayIso) {
             // Deadline already passed and the issue is still open — counts as assigned, missed.
             bucket.assigned += 1;
           }
@@ -215,7 +286,7 @@ export async function fetchJiraDeadlines(boards: StrategistBoard[]): Promise<Jir
       }),
     );
 
-    return { configured: true, error: null, fetchedAt, boardUrl, byEmail, issueStatusByEmail, unconfiguredEmails };
+    return { configured: true, error: null, fetchedAt, boardUrl, byEmail, issueStatusByEmail, projectsByEmail, unconfiguredEmails };
   } catch (err) {
     return {
       configured: true,
@@ -224,6 +295,7 @@ export async function fetchJiraDeadlines(boards: StrategistBoard[]): Promise<Jir
       boardUrl,
       byEmail,
       issueStatusByEmail,
+      projectsByEmail,
       unconfiguredEmails,
     };
   }

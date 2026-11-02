@@ -51,12 +51,12 @@ function MonthBreakdown({ month, entries }: { month: MonthKey; entries: { s: Str
 }
 
 function MonthlyHistory() {
-  const { filteredStrategists, recordsByStrategist, jiraDeadlines, bitacorasSync } = useStrategistDataInputs();
+  const { filteredStrategists, recordsByStrategist, jiraDeadlines, bitacorasSync, externalScores } = useStrategistDataInputs();
   const [expandedMonth, setExpandedMonth] = useState<MonthKey | null>(null);
   const months = [...monthsInYear(CURRENT_YEAR)].reverse();
 
   const rows = months.map((m) => {
-    const entries = filteredStrategists.map((s) => ({ s, r: getEffectiveRecordForMonth(s, m, recordsByStrategist, jiraDeadlines, bitacorasSync) }));
+    const entries = filteredStrategists.map((s) => ({ s, r: getEffectiveRecordForMonth(s, m, recordsByStrategist, jiraDeadlines, bitacorasSync, externalScores) }));
     const avg = (sel: (r: EffectiveRecord) => number | null) => {
       const vals = entries.map(({ r }) => sel(r)).filter((v): v is number => v !== null);
       return vals.length > 0 ? Math.round(vals.reduce((a, b) => a + b, 0) / vals.length) : null;

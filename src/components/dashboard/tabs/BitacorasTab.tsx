@@ -7,7 +7,7 @@ import Skeleton from "@/components/ui/Skeleton";
 import StatTile from "@/components/dashboard/StatTile";
 import StrategistAvatar from "@/components/dashboard/StrategistAvatar";
 import { useDashboardFilters } from "@/lib/dashboardFilters";
-import { useEffectiveRecords } from "@/lib/strategistRecords";
+import { useEffectiveRecords, useStrategistRecords } from "@/lib/strategistRecords";
 import { daysSince } from "@/lib/strategists";
 
 const AT_RISK_THRESHOLD = 75;
@@ -23,6 +23,7 @@ function toneFor(score: number): "good" | "warning" | "danger" {
 export function BitacorasTab() {
   const { bitacorasSync } = useDashboardFilters();
   const rows = useEffectiveRecords();
+  const { getSources } = useStrategistRecords();
 
   if (!bitacorasSync) {
     return (
@@ -78,12 +79,6 @@ export function BitacorasTab() {
         </span>
       </div>
 
-      {bitacorasSync.unmatchedNames.length > 0 && (
-        <div className="rounded-[var(--bp-radius-md)] border border-dashed border-[var(--bp-border)] bg-[var(--bp-surface)] px-3 py-2 text-[11px] text-[var(--bp-ink-soft)]">
-          La hoja tiene filas que no coinciden con ningún estratega registrado: {bitacorasSync.unmatchedNames.join(", ")}.
-        </div>
-      )}
-
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         <StatTile label="Cumplimiento de bitácoras" value={teamRate !== null ? `${teamRate}%` : NO_DATA_LABEL} tone={teamRate !== null ? toneFor(teamRate) : "neutral"} />
         <StatTile label="Bitácoras registradas" value={`${totalSubmitted} / ${totalExpected}`} sublabel="En el periodo seleccionado" />
@@ -126,7 +121,8 @@ export function BitacorasTab() {
               </tr>
             )}
             {rows.map(({ s, r }, i) => {
-              const notApplicable = bitacorasSync.notApplicableIds.includes(s.id);
+              const manual = !getSources(s.id).bitacoras;
+              const notApplicable = !manual && bitacorasSync.notApplicableIds.includes(s.id);
               const isOverdue = !notApplicable && r.lastBitacoraDate && daysSince(r.lastBitacoraDate) > OVERDUE_DAYS;
               return (
                 <tr key={s.id} className="bp-row-in border-b border-[var(--bp-border)] last:border-0" style={{ animationDelay: `${Math.min(i, 12) * 25}ms` }}>
@@ -142,13 +138,15 @@ export function BitacorasTab() {
                         100% <span className="text-[11px] text-[var(--bp-ink-soft)]">· No aplica</span>
                       </>
                     ) : r.bitacoraComplianceRate !== null ? (
-                      `${r.bitacoraComplianceRate}%`
+                      <>
+                        {r.bitacoraComplianceRate}%{manual && <span className="text-[11px] text-[var(--bp-ink-soft)]"> · manual</span>}
+                      </>
                     ) : (
                       <span className="text-[11px] text-[var(--bp-ink-soft)]">{NO_DATA_LABEL}</span>
                     )}
                   </td>
                   <td className={`px-3 py-2.5 font-mono ${isOverdue ? "text-[var(--bp-danger)]" : "text-[var(--bp-ink-soft)]"}`}>
-                    {notApplicable ? "No aplica por el momento" : r.lastBitacoraDate ?? "—"}
+                    {notApplicable ? "No aplica por el momento" : manual ? "No usa la hoja · captura manual" : (r.lastBitacoraDate ?? "—")}
                     {isOverdue && r.lastBitacoraDate ? ` (hace ${daysSince(r.lastBitacoraDate)} días)` : ""}
                   </td>
                 </tr>

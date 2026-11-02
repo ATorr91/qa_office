@@ -1,34 +1,42 @@
 "use client";
 
-import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import { useDashboardFilters, type BitacorasByStrategistId, type DeadlinesByEmail } from "@/lib/dashboardFilters";
+import type { ExternalMonthScores, ExternalScoresResponse } from "@/lib/externalScores";
 import {
   monthsForPeriod,
   pct,
+  resolveSources,
+  STRATEGISTS,
   type MonthKey,
   type Okr,
   type PeerComment,
   type Period,
   type ProjectAssignment,
   type Strategist,
+  type StrategistSources,
 } from "@/lib/strategists";
 
 const RECORDS_STORAGE_KEY = "qa-office:dashboard-estrategas-records-v2";
 const PROJECTS_STORAGE_KEY = "qa-office:dashboard-estrategas-projects";
 const JIRA_BOARDS_STORAGE_KEY = "qa-office:dashboard-estrategas-jira-boards";
+const SOURCES_STORAGE_KEY = "qa-office:dashboard-estrategas-sources";
 
 /** One strategist's manually-entered data for one month. Every field starts unset — nothing here is fabricated. */
 export interface ManualMonthlyData {
   peerReviewScore: number | null;
   peerReviewCount: number | null;
   peerComments: PeerComment[];
+  /** One score for OKRs and KPIs together (0-100). */
   okrCompletion: number | null;
-  kpiCompliance: number | null;
   okrs: Okr[];
   qaScore: number | null;
   qaReviewsCount: number | null;
   qaIssuesFound: number | null;
   npsScore: number | null;
+  /** Manual stand-ins for the two live metrics: only used when Jira / Sheets have nothing for that month. */
+  deadlineCompliance: number | null;
+  bitacoraCompliance: number | null;
   selfAssessmentBiggestWin: string;
   selfAssessmentMistakeLearning: string;
   selfAssessmentSkillToDevelop: string;
@@ -39,12 +47,13 @@ export const EMPTY_MONTHLY_DATA: ManualMonthlyData = {
   peerReviewCount: null,
   peerComments: [],
   okrCompletion: null,
-  kpiCompliance: null,
   okrs: [],
   qaScore: null,
   qaReviewsCount: null,
   qaIssuesFound: null,
   npsScore: null,
+  deadlineCompliance: null,
+  bitacoraCompliance: null,
   selfAssessmentBiggestWin: "",
   selfAssessmentMistakeLearning: "",
   selfAssessmentSkillToDevelop: "",
@@ -53,9 +62,22 @@ export const EMPTY_MONTHLY_DATA: ManualMonthlyData = {
 type RecordsState = Record<string, Partial<Record<MonthKey, ManualMonthlyData>>>;
 type ProjectsState = Record<string, ProjectAssignment[]>;
 type JiraBoardsState = Record<string, string>;
+type SourcesState = Record<string, Partial<StrategistSources>>;
+
+/** Where the admin data lives: the shared database, or (no DATABASE_URL / unreachable) this browser's own storage. */
+export type StorageMode = "loading" | "db" | "local";
 
 interface StrategistRecordsContextValue {
+  /** True once the data has been read from wherever it lives. */
   hydrated: boolean;
+  storage: StorageMode;
+  /** Why the database couldn't be used, when `storage` fell back to "local". */
+  dbError: string | null;
+  /** The last failed save, if any (cleared by the next successful save). */
+  saveError: string | null;
+  /** Entries stored in this browser that the database doesn't have yet. */
+  importableCount: number;
+  importLocalData: () => Promise<void>;
   recordsByStrategist: RecordsState;
   getMonthData: (strategistId: string, month: MonthKey) => ManualMonthlyData;
   setMonthData: (strategistId: string, month: MonthKey, data: ManualMonthlyData) => void;
@@ -65,63 +87,200 @@ interface StrategistRecordsContextValue {
   jiraBoards: JiraBoardsState;
   getJiraBoard: (strategistId: string) => string;
   setJiraBoard: (strategistId: string, projectKey: string) => void;
+  /** Which live sources (Jira, bitácoras sheet) this strategist uses; the rest of their metrics are typed by hand. */
+  getSources: (strategistId: string) => StrategistSources;
+  setSources: (strategistId: string, sources: StrategistSources) => void;
+}
+
+/** Records saved before a field existed come back without it; fill the gaps with "no data". */
+export function withDefaults(data: (Partial<ManualMonthlyData> & { kpiCompliance?: number | null }) | undefined): ManualMonthlyData {
+  // OKRs and KPIs used to be two scores; records saved that way fold into one (their average) and the old field is dropped.
+  const { kpiCompliance, ...rest } = data ?? {};
+  const merged = { ...EMPTY_MONTHLY_DATA, ...rest };
+  if (kpiCompliance !== null && kpiCompliance !== undefined) {
+    merged.okrCompletion = merged.okrCompletion === null ? kpiCompliance : Math.round((merged.okrCompletion + kpiCompliance) / 2);
+  }
+  return merged;
 }
 
 const StrategistRecordsContext = createContext<StrategistRecordsContextValue | null>(null);
 
-function useLocalStorageState<T>(key: string, initial: T): [T, (updater: T | ((prev: T) => T)) => void, boolean] {
-  const [state, setState] = useState<T>(initial);
-  const [hydrated, setHydrated] = useState(false);
+type DashboardWrite =
+  | { kind: "month"; strategistId: string; month: MonthKey; data: ManualMonthlyData }
+  | { kind: "projects"; strategistId: string; projects: ProjectAssignment[] }
+  | { kind: "board"; strategistId: string; projectKeys: string }
+  | { kind: "sources"; strategistId: string; jira: boolean; bitacoras: boolean };
 
-  useEffect(() => {
-    try {
-      const raw = window.localStorage.getItem(key);
-      if (raw) setState(JSON.parse(raw) as T);
-    } catch {
-      // Corrupt or inaccessible storage — start from the initial value (no fabricated fallback data).
+interface DashboardDataResponse {
+  configured: boolean;
+  error?: string;
+  records?: RecordsState;
+  projects?: ProjectsState;
+  jiraBoards?: JiraBoardsState;
+  sources?: SourcesState;
+}
+
+const KNOWN_IDS = new Set(STRATEGISTS.map((s) => s.id));
+
+function readLocal<T>(key: string, fallback: T): T {
+  try {
+    const raw = window.localStorage.getItem(key);
+    return raw ? (JSON.parse(raw) as T) : fallback;
+  } catch {
+    // Corrupt or inaccessible storage — start empty (no fabricated fallback data).
+    return fallback;
+  }
+}
+
+/** What this browser holds that `db` doesn't, as writes — never overwrites an entry the database already has. */
+function localOnlyWrites(db: { records: RecordsState; projects: ProjectsState; jiraBoards: JiraBoardsState }): DashboardWrite[] {
+  const writes: DashboardWrite[] = [];
+  const records = readLocal<RecordsState>(RECORDS_STORAGE_KEY, {});
+  for (const [strategistId, months] of Object.entries(records)) {
+    if (!KNOWN_IDS.has(strategistId)) continue;
+    for (const [month, data] of Object.entries(months)) {
+      if (data && !db.records[strategistId]?.[month]) writes.push({ kind: "month", strategistId, month, data: withDefaults(data) });
     }
-    setHydrated(true);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }
+  const projects = readLocal<ProjectsState>(PROJECTS_STORAGE_KEY, {});
+  for (const [strategistId, list] of Object.entries(projects)) {
+    if (KNOWN_IDS.has(strategistId) && list.length > 0 && !db.projects[strategistId]?.length) writes.push({ kind: "projects", strategistId, projects: list });
+  }
+  const boards = readLocal<JiraBoardsState>(JIRA_BOARDS_STORAGE_KEY, {});
+  for (const [strategistId, projectKeys] of Object.entries(boards)) {
+    if (KNOWN_IDS.has(strategistId) && projectKeys.trim() !== "" && !db.jiraBoards[strategistId]) writes.push({ kind: "board", strategistId, projectKeys });
+  }
+  return writes;
+}
 
-  useEffect(() => {
-    if (!hydrated) return;
-    try {
-      window.localStorage.setItem(key, JSON.stringify(state));
-    } catch {
-      // Storage full or unavailable (private browsing) — edits stay in-memory for this session.
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [state, hydrated]);
-
-  return [state, setState, hydrated];
+async function sendWrites(writes: DashboardWrite[]): Promise<void> {
+  const res = await fetch("/api/dashboard-data", {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ writes }),
+  });
+  if (!res.ok) {
+    const body = (await res.json().catch(() => ({}))) as { error?: string };
+    throw new Error(res.status === 401 ? "Tu sesión de admin venció: vuelve a entrar para guardar." : (body.error ?? `Error ${res.status} al guardar.`));
+  }
 }
 
 export function StrategistRecordsProvider({ children }: { children: ReactNode }) {
-  const [records, setRecords, recordsHydrated] = useLocalStorageState<RecordsState>(RECORDS_STORAGE_KEY, {});
-  const [projects, setProjects, projectsHydrated] = useLocalStorageState<ProjectsState>(PROJECTS_STORAGE_KEY, {});
-  const [jiraBoards, setJiraBoards, boardsHydrated] = useLocalStorageState<JiraBoardsState>(JIRA_BOARDS_STORAGE_KEY, {});
+  const [records, setRecords] = useState<RecordsState>({});
+  const [projects, setProjects] = useState<ProjectsState>({});
+  const [jiraBoards, setJiraBoards] = useState<JiraBoardsState>({});
+  const [sources, setSourcesState] = useState<SourcesState>({});
+  const [storage, setStorage] = useState<StorageMode>("loading");
+  const [dbError, setDbError] = useState<string | null>(null);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [importableCount, setImportableCount] = useState(0);
+
+  const load = useCallback(async () => {
+    try {
+      const res = await fetch("/api/dashboard-data", { cache: "no-store" });
+      const json = (await res.json()) as DashboardDataResponse;
+      if (json.configured && res.ok) {
+        const db = { records: json.records ?? {}, projects: json.projects ?? {}, jiraBoards: json.jiraBoards ?? {} };
+        setRecords(db.records);
+        setProjects(db.projects);
+        setJiraBoards(db.jiraBoards);
+        setSourcesState(json.sources ?? {});
+        setImportableCount(localOnlyWrites(db).length);
+        setDbError(null);
+        setStorage("db");
+        return;
+      }
+      setDbError(json.configured ? (json.error ?? "No se pudo leer la base de datos.") : null);
+    } catch {
+      setDbError("No se pudo conectar con el servidor.");
+    }
+    // No database (or it's unreachable): this browser's own storage keeps working.
+    setRecords(readLocal<RecordsState>(RECORDS_STORAGE_KEY, {}));
+    setProjects(readLocal<ProjectsState>(PROJECTS_STORAGE_KEY, {}));
+    setJiraBoards(readLocal<JiraBoardsState>(JIRA_BOARDS_STORAGE_KEY, {}));
+    setSourcesState(readLocal<SourcesState>(SOURCES_STORAGE_KEY, {}));
+    setStorage("local");
+  }, []);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    void load();
+  }, [load]);
+
+  // In "local" mode every change is mirrored to localStorage; in "db" mode the database is the source of truth.
+  useEffect(() => {
+    if (storage !== "local") return;
+    try {
+      window.localStorage.setItem(RECORDS_STORAGE_KEY, JSON.stringify(records));
+      window.localStorage.setItem(PROJECTS_STORAGE_KEY, JSON.stringify(projects));
+      window.localStorage.setItem(JIRA_BOARDS_STORAGE_KEY, JSON.stringify(jiraBoards));
+      window.localStorage.setItem(SOURCES_STORAGE_KEY, JSON.stringify(sources));
+    } catch {
+      // Storage full or unavailable (private browsing) — edits stay in-memory for this session.
+    }
+  }, [storage, records, projects, jiraBoards, sources]);
+
+  const persist = useCallback(
+    (writes: DashboardWrite[]) => {
+      if (storage !== "db") return;
+      sendWrites(writes).then(
+        () => setSaveError(null),
+        (err: unknown) => {
+          setSaveError(err instanceof Error ? err.message : "No se pudo guardar.");
+          // The optimistic edit didn't land: show what the database actually has.
+          void load();
+        },
+      );
+    },
+    [storage, load],
+  );
+
+  const importLocalData = useCallback(async () => {
+    const writes = localOnlyWrites({ records, projects, jiraBoards });
+    if (writes.length === 0) return;
+    try {
+      // Chunked so a large history stays under the API's per-request limit.
+      for (let i = 0; i < writes.length; i += 100) await sendWrites(writes.slice(i, i + 100));
+      setSaveError(null);
+    } catch (err) {
+      setSaveError(err instanceof Error ? err.message : "No se pudo importar.");
+    }
+    await load();
+  }, [records, projects, jiraBoards, load]);
 
   const value = useMemo<StrategistRecordsContextValue>(
     () => ({
-      hydrated: recordsHydrated && projectsHydrated && boardsHydrated,
+      hydrated: storage !== "loading",
+      storage,
+      dbError,
+      saveError,
+      importableCount,
+      importLocalData,
       recordsByStrategist: records,
-      getMonthData: (strategistId, month) => records[strategistId]?.[month] ?? EMPTY_MONTHLY_DATA,
+      getMonthData: (strategistId, month) => withDefaults(records[strategistId]?.[month]),
       setMonthData: (strategistId, month, data) => {
         setRecords((prev) => ({ ...prev, [strategistId]: { ...prev[strategistId], [month]: data } }));
+        persist([{ kind: "month", strategistId, month, data }]);
       },
       projectsByStrategist: projects,
       getProjectHistory: (strategistId) => projects[strategistId] ?? [],
       setProjectHistory: (strategistId, list) => {
         setProjects((prev) => ({ ...prev, [strategistId]: list }));
+        persist([{ kind: "projects", strategistId, projects: list }]);
       },
       jiraBoards,
       getJiraBoard: (strategistId) => jiraBoards[strategistId] ?? "",
-      setJiraBoard: (strategistId, projectKey) => {
-        setJiraBoards((prev) => ({ ...prev, [strategistId]: projectKey }));
+      setJiraBoard: (strategistId, projectKeys) => {
+        setJiraBoards((prev) => ({ ...prev, [strategistId]: projectKeys }));
+        persist([{ kind: "board", strategistId, projectKeys }]);
+      },
+      getSources: (strategistId) => resolveSources(strategistId, sources[strategistId]),
+      setSources: (strategistId, next) => {
+        setSourcesState((prev) => ({ ...prev, [strategistId]: next }));
+        persist([{ kind: "sources", strategistId, jira: next.jira, bitacoras: next.bitacoras }]);
       },
     }),
-    [records, recordsHydrated, projects, projectsHydrated, jiraBoards, boardsHydrated, setRecords, setProjects, setJiraBoards],
+    [records, projects, jiraBoards, sources, storage, dbError, saveError, importableCount, importLocalData, persist],
   );
 
   return <StrategistRecordsContext.Provider value={value}>{children}</StrategistRecordsContext.Provider>;
@@ -141,7 +300,6 @@ export interface EffectiveRecord {
   peerReviewCount: number | null;
   peerComments: PeerComment[];
   okrCompletion: number | null;
-  kpiCompliance: number | null;
   okrs: Okr[];
   deadlinesAssigned: number;
   deadlinesOnTime: number;
@@ -154,6 +312,13 @@ export interface EffectiveRecord {
   qaReviewsCount: number | null;
   qaIssuesFound: number | null;
   npsScore: number | null;
+  /** From the live sources (Gmail QA reports / Figma surveys / CSAT sheet); zero or null when a month had none. */
+  qaReportCount: number;
+  npsResponses: number;
+  /** Average of the survey's 1-5 ratings, as 0-100. */
+  satisfactionScore: number | null;
+  csatScore: number | null;
+  csatResponses: number;
   selfAssessments: { month: MonthKey; biggestWin: string; mistakeLearning: string; skillToDevelop: string }[];
   hasAnyData: boolean;
 }
@@ -192,16 +357,17 @@ export function getEffectiveRecord(
   deadlinesByMonth: Partial<Record<MonthKey, MonthDeadlineCount>> | null,
   period: Period,
   bitacorasByMonth: Partial<Record<MonthKey, BitacoraMonthCount>> | null = null,
+  externalByMonth: Partial<Record<MonthKey, ExternalMonthScores>> | null = null,
 ): EffectiveRecord {
   const months = monthsForPeriod(period);
-  const manuals = months.map((m) => manualByMonth[m] ?? EMPTY_MONTHLY_DATA);
+  const externals = months.map((m) => externalByMonth?.[m]);
+  const manuals = months.map((m) => withDefaults(manualByMonth[m]));
 
   const peerReviewScore = avgOrNull(manuals.map((m) => m.peerReviewScore));
   const peerReviewCount = sumOrNull(manuals.map((m) => m.peerReviewCount));
   const peerComments = manuals.flatMap((m) => m.peerComments);
 
   const okrCompletion = avgOrNull(manuals.map((m) => m.okrCompletion));
-  const kpiCompliance = avgOrNull(manuals.map((m) => m.kpiCompliance));
   const okrs = manuals.flatMap((m) => m.okrs);
 
   let bitacorasExpected: number | null = null;
@@ -218,11 +384,20 @@ export function getEffectiveRecord(
     }
   }
 
-  const qaScore = avgOrNull(manuals.map((m) => m.qaScore));
+  // Live data always wins; a manually entered value only fills in when the live source has nothing.
+  if (bitacoraComplianceRate === null) bitacoraComplianceRate = avgOrNull(manuals.map((m) => m.bitacoraCompliance));
+
+  // Live data wins here too: the QA reports from Gmail and the NPS surveys from Figma replace a typed value.
+  const qaScore = avgOrNull(externals.map((e) => e?.qaScore)) ?? avgOrNull(manuals.map((m) => m.qaScore));
+  const qaReportCount = externals.reduce((acc, e) => acc + (e?.qaReports ?? 0), 0);
   const qaReviewsCount = sumOrNull(manuals.map((m) => m.qaReviewsCount));
   const qaIssuesFound = sumOrNull(manuals.map((m) => m.qaIssuesFound));
 
-  const npsScore = avgOrNull(manuals.map((m) => m.npsScore));
+  const npsScore = avgOrNull(externals.map((e) => e?.nps)) ?? avgOrNull(manuals.map((m) => m.npsScore));
+  const npsResponses = externals.reduce((acc, e) => acc + (e?.npsResponses ?? 0), 0);
+  const satisfactionScore = avgOrNull(externals.map((e) => e?.satisfaction));
+  const csatScore = avgOrNull(externals.map((e) => e?.csat));
+  const csatResponses = externals.reduce((acc, e) => acc + (e?.csatResponses ?? 0), 0);
 
   let deadlinesAssigned = 0;
   let deadlinesOnTime = 0;
@@ -237,10 +412,11 @@ export function getEffectiveRecord(
     }
     deadlineComplianceRate = deadlinesAssigned > 0 ? pct(deadlinesOnTime, deadlinesAssigned) : null;
   }
+  if (deadlineComplianceRate === null) deadlineComplianceRate = avgOrNull(manuals.map((m) => m.deadlineCompliance));
 
   const selfAssessments = months
     .map((m) => {
-      const data = manualByMonth[m] ?? EMPTY_MONTHLY_DATA;
+      const data = withDefaults(manualByMonth[m]);
       const hasAny = data.selfAssessmentBiggestWin || data.selfAssessmentMistakeLearning || data.selfAssessmentSkillToDevelop;
       return hasAny
         ? {
@@ -253,14 +429,14 @@ export function getEffectiveRecord(
     })
     .filter((v): v is NonNullable<typeof v> => v !== null);
 
-  const npsNormalized = npsScore !== null ? (npsScore + 100) / 2 : null;
-  const performanceScore = avgOrNull([peerReviewScore, okrCompletion, kpiCompliance, deadlineComplianceRate, bitacoraComplianceRate, qaScore, npsNormalized]);
+  // NPS and CSAT measure how clients perceive the work, not how the strategist executes it, so they are shown
+  // on their own and stay out of this average.
+  const performanceScore = avgOrNull([peerReviewScore, okrCompletion, deadlineComplianceRate, bitacoraComplianceRate, qaScore]);
 
   const hasAnyData =
     performanceScore !== null ||
     peerReviewScore !== null ||
     okrCompletion !== null ||
-    kpiCompliance !== null ||
     bitacoraComplianceRate !== null ||
     qaScore !== null ||
     npsScore !== null ||
@@ -275,7 +451,6 @@ export function getEffectiveRecord(
     peerReviewCount,
     peerComments,
     okrCompletion,
-    kpiCompliance,
     okrs,
     deadlinesAssigned,
     deadlinesOnTime,
@@ -288,9 +463,32 @@ export function getEffectiveRecord(
     qaReviewsCount,
     qaIssuesFound,
     npsScore,
+    qaReportCount,
+    npsResponses,
+    satisfactionScore,
+    csatScore,
+    csatResponses,
     selfAssessments,
     hasAnyData,
   };
+}
+
+export interface PerformanceComponent {
+  key: "peer" | "okr" | "deadlines" | "bitacoras" | "qa";
+  label: string;
+  /** 0-100 as it enters the average, or null when there is no data. */
+  value: number | null;
+}
+
+/** The five inputs that get averaged into `performanceScore`, in display order. */
+export function performanceComponents(r: EffectiveRecord): PerformanceComponent[] {
+  return [
+    { key: "peer", label: "Peer review", value: r.peerReviewScore },
+    { key: "okr", label: "OKRs y KPIs", value: r.okrCompletion },
+    { key: "deadlines", label: "Deadlines", value: r.deadlineComplianceRate },
+    { key: "bitacoras", label: "Bitácoras", value: r.bitacoraComplianceRate },
+    { key: "qa", label: "Calificación QA", value: r.qaScore },
+  ];
 }
 
 function deadlinesForEmail(
@@ -307,25 +505,53 @@ function bitacorasForStrategist(
   return bitacorasSync?.configured && !bitacorasSync.error ? bitacorasSync.byStrategistId[strategistId] ?? {} : null;
 }
 
-/** Combines manual admin-entered data with real Jira deadlines and Google Sheets bitácoras for every currently-filtered strategist. */
+export function externalForStrategist(external: ExternalScoresResponse | null, strategistId: string): Partial<Record<MonthKey, ExternalMonthScores>> | null {
+  return external?.configured && !external.error ? external.byStrategistId[strategistId] ?? {} : null;
+}
+
+/** Combines manual admin-entered data with real Jira deadlines, Google Sheets bitácoras and the QA / NPS / CSAT scores for every currently-filtered strategist. */
 export function useEffectiveRecords(): { s: Strategist; r: EffectiveRecord }[] {
-  const { filteredStrategists, period, jiraDeadlines, bitacorasSync } = useDashboardFilters();
+  const { filteredStrategists, period, jiraDeadlines, bitacorasSync, externalScores } = useDashboardFilters();
   const { recordsByStrategist } = useStrategistRecords();
 
   return filteredStrategists.map((s) => {
     const manualByMonth = recordsByStrategist[s.id] ?? {};
     return {
       s,
-      r: getEffectiveRecord(manualByMonth, deadlinesForEmail(jiraDeadlines, s.email), period, bitacorasForStrategist(bitacorasSync, s.id)),
+      r: getEffectiveRecord(
+        manualByMonth,
+        deadlinesForEmail(jiraDeadlines, s.email),
+        period,
+        bitacorasForStrategist(bitacorasSync, s.id),
+        externalForStrategist(externalScores, s.id),
+      ),
     };
   });
 }
 
+/** One strategist's effective record for the selected period, regardless of the search filter (for their profile). */
+export function useEffectiveRecordFor(strategistId: string): { s: Strategist; r: EffectiveRecord } | null {
+  const { period, jiraDeadlines, bitacorasSync, externalScores } = useDashboardFilters();
+  const { recordsByStrategist } = useStrategistRecords();
+  const s = STRATEGISTS.find((x) => x.id === strategistId);
+  if (!s) return null;
+  return {
+    s,
+    r: getEffectiveRecord(
+      recordsByStrategist[s.id] ?? {},
+      deadlinesForEmail(jiraDeadlines, s.email),
+      period,
+      bitacorasForStrategist(bitacorasSync, s.id),
+      externalForStrategist(externalScores, s.id),
+    ),
+  };
+}
+
 /** Raw inputs for tabs that need to compute a per-month trend (one point per month, not just the selected period). */
 export function useStrategistDataInputs() {
-  const { filteredStrategists, jiraDeadlines, bitacorasSync } = useDashboardFilters();
+  const { filteredStrategists, jiraDeadlines, bitacorasSync, externalScores } = useDashboardFilters();
   const { recordsByStrategist } = useStrategistRecords();
-  return { filteredStrategists, recordsByStrategist, jiraDeadlines, bitacorasSync };
+  return { filteredStrategists, recordsByStrategist, jiraDeadlines, bitacorasSync, externalScores };
 }
 
 /** Effective record for one strategist in one specific month (for trend charts and history, bypassing the selected period). */
@@ -335,6 +561,7 @@ export function getEffectiveRecordForMonth(
   recordsByStrategist: RecordsState,
   jiraDeadlines: { configured: boolean; error: string | null; byEmail: DeadlinesByEmail } | null,
   bitacorasSync: { configured: boolean; error: string | null; byStrategistId: BitacorasByStrategistId } | null = null,
+  externalScores: ExternalScoresResponse | null = null,
 ): EffectiveRecord {
   const manualByMonth = recordsByStrategist[strategist.id] ?? {};
   return getEffectiveRecord(
@@ -342,5 +569,6 @@ export function getEffectiveRecordForMonth(
     deadlinesForEmail(jiraDeadlines, strategist.email),
     month,
     bitacorasForStrategist(bitacorasSync, strategist.id),
+    externalForStrategist(externalScores, strategist.id),
   );
 }

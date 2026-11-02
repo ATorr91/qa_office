@@ -60,7 +60,7 @@ export function DashboardPrintableReport({ strategists, period }: { strategists:
             <div style={{ fontSize: 11, marginTop: 4, display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 4 }}>
               <div>Desempeño: <strong>{r.performanceScore !== null ? `${r.performanceScore}%` : NO_DATA}</strong></div>
               <div>Peer review: <strong>{r.peerReviewScore !== null ? `${r.peerReviewScore}%` : NO_DATA}</strong>{r.peerReviewCount !== null ? ` (${r.peerReviewCount} eval.)` : ""}</div>
-              <div>OKR: <strong>{r.okrCompletion !== null ? `${r.okrCompletion}%` : NO_DATA}</strong> · KPI: <strong>{r.kpiCompliance !== null ? `${r.kpiCompliance}%` : NO_DATA}</strong></div>
+              <div>OKRs y KPIs: <strong>{r.okrCompletion !== null ? `${r.okrCompletion}%` : NO_DATA}</strong></div>
               <div>Deadlines (Jira): <strong>{deadlineText}</strong></div>
               <div>
                 Bitácoras (Sheets): <strong>{r.bitacoraComplianceRate !== null ? `${r.bitacoraComplianceRate}%` : NO_DATA}</strong>
@@ -68,7 +68,7 @@ export function DashboardPrintableReport({ strategists, period }: { strategists:
               </div>
               <div>Última bitácora: {r.lastBitacoraDate ?? "—"}</div>
               <div>Calificación QA: <strong>{r.qaScore !== null ? `${r.qaScore}%` : NO_DATA}</strong>{r.qaIssuesFound !== null ? ` (${r.qaIssuesFound} hallazgos)` : ""}</div>
-              <div>NPS cliente: <strong>{r.npsScore !== null ? r.npsScore : NO_DATA}</strong></div>
+              <div>NPS cliente (aparte): <strong>{r.npsScore !== null ? r.npsScore : NO_DATA}</strong></div>
             </div>
             {r.okrs.length > 0 && (
               <div style={{ fontSize: 10.5, marginTop: 6 }}>

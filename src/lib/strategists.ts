@@ -9,7 +9,7 @@ export type MonthKey = string;
 /** A single month ("YYYY-MM") or a whole year's aggregate ("YYYY-anual"). */
 export type Period = string;
 
-export const DASHBOARD_LAST_UPDATED = "2026-08-17";
+export const DASHBOARD_LAST_UPDATED = "2026-10-29";
 
 export const [CURRENT_YEAR, CURRENT_MONTH] = DASHBOARD_LAST_UPDATED.split("-").slice(0, 2).map(Number) as [number, number];
 
@@ -153,9 +153,23 @@ export interface SelfAssessment {
   skillToDevelop: string;
 }
 
+export type ProjectStatus = "active" | "planned" | "paused" | "completed" | "inactive";
+
+export const PROJECT_STATUS_LABELS: Record<ProjectStatus, string> = {
+  active: "Activo",
+  planned: "Planeado",
+  paused: "En pausa",
+  completed: "Terminado",
+  inactive: "Inactivo",
+};
+
 /** One project a strategist has worked on — not tied to a single month, spans a date range. */
 export interface ProjectAssignment {
   id: string;
+  /** Tracker code ("395.02"), cell ("Cell 2") and status, when the project comes from the project tracker. */
+  code?: string;
+  cell?: string;
+  status?: ProjectStatus;
   projectName: string;
   client: string;
   role: string;
@@ -170,6 +184,8 @@ export interface Strategist {
   role: string;
   email: string;
   avatarColor: string;
+  /** Path under /public, or null when there is no photo yet (the avatar then shows initials). */
+  photo: string | null;
 }
 
 const AVATAR_COLORS = ["var(--bp-blue)", "var(--bp-magenta)", "var(--bp-purple)", "var(--bp-green)", "var(--bp-cyan)"];
@@ -178,8 +194,8 @@ const AVATAR_COLORS = ["var(--bp-blue)", "var(--bp-magenta)", "var(--bp-purple)"
 const PROFILES: { id: string; name: string; role: string; email: string }[] = [
   { id: "adriana-ruiz", name: "Adriana Ruiz", role: "Estratega", email: "adriana.ruiz@bluepixel.mx" },
   { id: "alexis-aguilar", name: "Alexis Aguilar", role: "Estratega", email: "alexis.aguilar@bluepixel.mx" },
-  { id: "carlos-gonzalez", name: "Carlos Quijano", role: "Estratega", email: "carlos.gonzalez@bluepixel.mx" },
   { id: "daniel-gamboa", name: "Daniel Gamboa", role: "Estratega", email: "daniel.gamboa@bluepixel.mx" },
+  { id: "daniel-morfin", name: "Daniel Morfin", role: "Estratega", email: "daniel.morfin@bluepixel.mx" },
   { id: "johanna-quiroga", name: "Johanna Quiroga", role: "Estratega", email: "johanna.quiroga@bluepixel.mx" },
   { id: "jorge-de-buen", name: "Jorge de Buen", role: "Estratega", email: "jorge@bluepixel.mx" },
   { id: "lucero-cervantes", name: "Lucero Cervantes", role: "Estratega", email: "lucero.cervantes@bluepixel.mx" },
@@ -188,10 +204,45 @@ const PROFILES: { id: string; name: string; role: string; email: string }[] = [
   { id: "montserrat-hernandez", name: "Montserrat Hernández", role: "Estratega", email: "montserrat.hernandez@bluepixel.mx" },
 ];
 
+// Photos live in public/strategists/<id>.jpg (taken from the team's email signatures). Add the id here when a new one is dropped in.
+const PHOTO_IDS = new Set([
+  "adriana-ruiz",
+  "alexis-aguilar",
+  "camila",
+  "daniel-gamboa",
+  "johanna-quiroga",
+  "jorge-de-buen",
+  "lucero-cervantes",
+  "luis-rodriguez",
+  "montserrat-hernandez",
+]);
+
 export const STRATEGISTS: Strategist[] = PROFILES.map((p, i) => ({
   ...p,
   avatarColor: AVATAR_COLORS[i % AVATAR_COLORS.length],
+  photo: PHOTO_IDS.has(p.id) ? `/strategists/${p.id}.jpg` : null,
 }));
+
+/**
+ * Which live sources feed a strategist's metrics. When one is off, that metric is typed by hand in Admin
+ * instead (deadlines for people who don't work in Jira, bitácoras for people who aren't on the sheet).
+ */
+export interface StrategistSources {
+  jira: boolean;
+  bitacoras: boolean;
+}
+
+export const ALL_SOURCES: StrategistSources = { jira: true, bitacoras: true };
+
+// Starting point for people who are known not to be in a live source. Admin can change any of these.
+const DEFAULT_SOURCE_OVERRIDES: Record<string, Partial<StrategistSources>> = {
+  "daniel-morfin": { jira: false, bitacoras: false },
+};
+
+/** A strategist's sources: what Admin saved, else the roster default, else everything live. */
+export function resolveSources(strategistId: string, saved?: Partial<StrategistSources>): StrategistSources {
+  return { ...ALL_SOURCES, ...DEFAULT_SOURCE_OVERRIDES[strategistId], ...saved };
+}
 
 export function daysSince(dateIso: string): number {
   return Math.round((Date.now() - new Date(`${dateIso}T00:00:00`).getTime()) / 86_400_000);

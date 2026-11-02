@@ -1,23 +1,26 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
 import AdminDataForm from "@/components/dashboard/admin/AdminDataForm";
-import AdminLoginForm, { clearAdminAuth, isAdminAuthed } from "@/components/dashboard/admin/AdminLoginForm";
+import AdminLoginForm, { adminLogout, fetchAdminSession } from "@/components/dashboard/admin/AdminLoginForm";
 
 export default function AdminPage() {
   const [authed, setAuthed] = useState(false);
+  const [configured, setConfigured] = useState(true);
   const [checked, setChecked] = useState(false);
 
   useEffect(() => {
-    setAuthed(isAdminAuthed());
-    setChecked(true);
+    fetchAdminSession().then((session) => {
+      setAuthed(session.authed);
+      setConfigured(session.configured);
+      setChecked(true);
+    });
   }, []);
 
   if (!checked) return null;
 
   if (!authed) {
-    return <AdminLoginForm onSuccess={() => setAuthed(true)} />;
+    return <AdminLoginForm configured={configured} onSuccess={() => setAuthed(true)} />;
   }
 
   return (
@@ -33,14 +36,10 @@ export default function AdminPage() {
           </p>
         </div>
         <div className="flex items-center gap-3">
-          <Link href="/dashboard-estrategas" className="text-[12px] font-medium text-[var(--bp-blue-600)] underline-offset-2 hover:underline">
-            Volver al dashboard
-          </Link>
           <button
             type="button"
             onClick={() => {
-              clearAdminAuth();
-              setAuthed(false);
+              void adminLogout().then(() => setAuthed(false));
             }}
             className="text-[12px] font-medium text-[var(--bp-ink-soft)] underline-offset-2 hover:underline"
           >

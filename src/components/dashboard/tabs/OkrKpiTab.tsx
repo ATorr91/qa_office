@@ -26,10 +26,8 @@ export function OkrKpiTab() {
   const rows = useEffectiveRecords();
 
   const withOkr = rows.filter((x) => x.r.okrCompletion !== null);
-  const withKpi = rows.filter((x) => x.r.kpiCompliance !== null);
 
   const teamOkr = withOkr.length > 0 ? Math.round(withOkr.reduce((acc, x) => acc + x.r.okrCompletion!, 0) / withOkr.length) : null;
-  const teamKpi = withKpi.length > 0 ? Math.round(withKpi.reduce((acc, x) => acc + x.r.kpiCompliance!, 0) / withKpi.length) : null;
 
   const allOkrs = rows.flatMap((x) => x.r.okrs.map((okr) => ({ ...okr, strategist: x.s.name })));
   const onTrack = allOkrs.filter((o) => o.status === "on-track").length;
@@ -39,9 +37,8 @@ export function OkrKpiTab() {
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-        <StatTile label="Cumplimiento de OKRs" value={teamOkr !== null ? `${teamOkr}%` : NO_DATA_LABEL} tone={teamOkr !== null ? toneFor(teamOkr) : "neutral"} />
-        <StatTile label="Cumplimiento de KPIs" value={teamKpi !== null ? `${teamKpi}%` : NO_DATA_LABEL} tone={teamKpi !== null ? toneFor(teamKpi) : "neutral"} />
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <StatTile label="Cumplimiento de OKRs y KPIs" value={teamOkr !== null ? `${teamOkr}%` : NO_DATA_LABEL} tone={teamOkr !== null ? toneFor(teamOkr) : "neutral"} />
         <StatTile
           label="OKRs que requieren atención"
           value={String(atRisk + offTrack)}

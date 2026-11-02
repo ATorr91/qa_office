@@ -10,6 +10,7 @@ import {
   type Period,
   type Strategist,
 } from "./strategists";
+import { EMPTY_EXTERNAL_SCORES, type ExternalScoresResponse } from "./externalScores";
 import { useStrategistRecords } from "./strategistRecords";
 
 export type { Period };
@@ -26,9 +27,19 @@ export interface IssueStatusCount {
   done: number;
   inProgress: number;
   todo: number;
+  overdueOpen: number;
+  noDueDate: number;
 }
 
 export type IssueStatusByEmail = Record<string, IssueStatusCount>;
+
+export interface ProjectIssueStats extends IssueStatusCount {
+  name: string;
+  reported: number;
+  reportedOpen: number;
+}
+
+export type ProjectsByEmail = Record<string, Record<string, ProjectIssueStats>>;
 
 export interface JiraDeadlinesResponse {
   configured: boolean;
@@ -37,6 +48,7 @@ export interface JiraDeadlinesResponse {
   boardUrl: string | null;
   byEmail: DeadlinesByEmail;
   issueStatusByEmail: IssueStatusByEmail;
+  projectsByEmail: ProjectsByEmail;
   unconfiguredEmails: string[];
 }
 
@@ -53,7 +65,6 @@ export interface BitacorasSyncResponse {
   error: string | null;
   fetchedAt: string;
   byStrategistId: BitacorasByStrategistId;
-  unmatchedNames: string[];
   notApplicableIds: string[];
 }
 
@@ -74,6 +85,9 @@ interface DashboardFiltersValue {
   /** null while the initial fetch is in flight. */
   bitacorasSync: BitacorasSyncResponse | null;
   refreshBitacorasSync: () => void;
+  /** QA reports (Gmail), NPS surveys (Figma) and CSAT (Google Sheets), rolled up per strategist. null while the initial fetch is in flight. */
+  externalScores: ExternalScoresResponse | null;
+  refreshExternalScores: () => void;
 }
 
 const DashboardFiltersContext = createContext<DashboardFiltersValue | null>(null);
@@ -84,8 +98,10 @@ export function DashboardFiltersProvider({ children }: { children: ReactNode }) 
   const [specificDate, setSpecificDateState] = useState<string | null>(null);
   const [jiraDeadlines, setJiraDeadlines] = useState<JiraDeadlinesResponse | null>(null);
   const [refreshToken, setRefreshToken] = useState(0);
-  const { jiraBoards, hydrated: recordsHydrated } = useStrategistRecords();
-  const boardsKey = useMemo(() => JSON.stringify(jiraBoards), [jiraBoards]);
+  const { jiraBoards, hydrated: recordsHydrated, getSources } = useStrategistRecords();
+  // Strategists who don't use Jira: not queried, and their deadlines are typed by hand in Admin.
+  const noJiraKey = STRATEGISTS.filter((s) => !getSources(s.id).jira).map((s) => s.id).join(",");
+  const boardsKey = useMemo(() => JSON.stringify([jiraBoards, noJiraKey]), [jiraBoards, noJiraKey]);
   const lastFetchedBoardsKey = useRef<string | null>(null);
 
   useEffect(() => {
@@ -97,7 +113,7 @@ export function DashboardFiltersProvider({ children }: { children: ReactNode }) 
     fetch("/api/jira/deadlines", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ boards: jiraBoards }),
+      body: JSON.stringify({ boards: jiraBoards, skip: noJiraKey === "" ? [] : noJiraKey.split(",") }),
     })
       .then((res) => res.json())
       .then((json: JiraDeadlinesResponse) => {
@@ -112,6 +128,7 @@ export function DashboardFiltersProvider({ children }: { children: ReactNode }) 
             boardUrl: null,
             byEmail: {},
             issueStatusByEmail: {},
+            projectsByEmail: {},
             unconfiguredEmails: [],
           });
         }
@@ -143,7 +160,6 @@ export function DashboardFiltersProvider({ children }: { children: ReactNode }) 
             error: "No se pudo conectar con el servidor de la aplicación.",
             fetchedAt: new Date(0).toISOString(),
             byStrategistId: {},
-            unmatchedNames: [],
             notApplicableIds: [],
           });
         }
@@ -156,6 +172,30 @@ export function DashboardFiltersProvider({ children }: { children: ReactNode }) 
 
   function refreshBitacorasSync() {
     setBitacorasRefreshToken((n) => n + 1);
+  }
+
+  const [externalScores, setExternalScores] = useState<ExternalScoresResponse | null>(null);
+  const [externalRefreshToken, setExternalRefreshToken] = useState(0);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/external-scores")
+      .then((res) => res.json())
+      .then((json: ExternalScoresResponse) => {
+        if (!cancelled) setExternalScores(json);
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setExternalScores({ ...EMPTY_EXTERNAL_SCORES, configured: true, error: "No se pudo conectar con el servidor de la aplicación.", fetchedAt: new Date().toISOString() });
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [externalRefreshToken]);
+
+  function refreshExternalScores() {
+    setExternalRefreshToken((n) => n + 1);
   }
 
   function setPeriod(p: Period) {
@@ -173,6 +213,18 @@ export function DashboardFiltersProvider({ children }: { children: ReactNode }) 
     setPeriodState(getDefaultPeriod());
     setSpecificDateState(null);
   }
+
+  // Strategists who aren't on the bitácoras sheet get no live bitácora data, so only their typed value counts.
+  const noBitacorasKey = STRATEGISTS.filter((s) => !getSources(s.id).bitacoras).map((s) => s.id).join(",");
+  const effectiveBitacorasSync = useMemo<BitacorasSyncResponse | null>(() => {
+    if (!bitacorasSync || noBitacorasKey === "") return bitacorasSync;
+    const off = new Set(noBitacorasKey.split(","));
+    return {
+      ...bitacorasSync,
+      byStrategistId: Object.fromEntries(Object.entries(bitacorasSync.byStrategistId).filter(([id]) => !off.has(id))),
+      notApplicableIds: bitacorasSync.notApplicableIds.filter((id) => !off.has(id)),
+    };
+  }, [bitacorasSync, noBitacorasKey]);
 
   const filteredStrategists = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
@@ -196,10 +248,12 @@ export function DashboardFiltersProvider({ children }: { children: ReactNode }) 
       lastUpdated: DASHBOARD_LAST_UPDATED,
       jiraDeadlines,
       refreshJiraDeadlines,
-      bitacorasSync,
+      bitacorasSync: effectiveBitacorasSync,
       refreshBitacorasSync,
+      externalScores,
+      refreshExternalScores,
     }),
-    [searchQuery, period, specificDate, filteredStrategists, jiraDeadlines, bitacorasSync],
+    [searchQuery, period, specificDate, filteredStrategists, jiraDeadlines, effectiveBitacorasSync, externalScores],
   );
 
   return <DashboardFiltersContext.Provider value={value}>{children}</DashboardFiltersContext.Provider>;

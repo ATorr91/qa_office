@@ -4,11 +4,12 @@ import Badge from "@/components/ui/Badge";
 import BarList from "@/components/dashboard/BarList";
 import InsightPanel from "@/components/dashboard/InsightPanel";
 import Skeleton from "@/components/ui/Skeleton";
+import ManualDeadlinesNotice from "@/components/dashboard/ManualDeadlinesNotice";
 import StatTile from "@/components/dashboard/StatTile";
 import StrategistAvatar from "@/components/dashboard/StrategistAvatar";
 import TrendSparkline from "@/components/dashboard/TrendSparkline";
 import { useDashboardFilters, type DeadlinesByEmail as ByEmail, type MonthDeadlineCount } from "@/lib/dashboardFilters";
-import { useStrategistRecords } from "@/lib/strategistRecords";
+import { useEffectiveRecords, useStrategistRecords } from "@/lib/strategistRecords";
 import { getMonthShortLabel, getPreviousMonth, monthsForPeriod, periodYear, monthsInYear, type MonthKey } from "@/lib/strategists";
 
 const AT_RISK_THRESHOLD = 70;
@@ -38,7 +39,8 @@ function sumMonths(byEmail: ByEmail, email: string, months: MonthKey[]): MonthDe
 
 export function DeadlinesTab() {
   const { filteredStrategists, period, jiraDeadlines: data } = useDashboardFilters();
-  const { jiraBoards } = useStrategistRecords();
+  const { jiraBoards, getSources } = useStrategistRecords();
+  const effectiveRows = useEffectiveRecords();
 
   if (!data) {
     return (
@@ -90,12 +92,19 @@ export function DeadlinesTab() {
   const rows = filteredStrategists
     .map((s) => {
       const c = sumMonths(data.byEmail, s.email, monthsForCurrentPeriod);
-      const boardConfigured = !data.unconfiguredEmails?.includes(s.email);
+      // People who don't use Jira type their deadline compliance by hand (Admin); show that value instead.
+      const manual = !getSources(s.id).jira;
+      const manualRate = manual ? (effectiveRows.find((x) => x.s.id === s.id)?.r.deadlineComplianceRate ?? null) : null;
+      const boardConfigured = manual || !data.unconfiguredEmails?.includes(s.email);
       return {
         s,
+        manual,
+        manualRate,
         assigned: c.assigned,
         onTime: c.onTime,
-        complianceRate: rate(c.onTime, c.assigned),
+        complianceRate: manual ? (manualRate ?? 0) : rate(c.onTime, c.assigned),
+        // No tickets (or nothing typed) means "no data", not 0%: such people stay out of the ranking.
+        hasData: manual ? manualRate !== null : c.assigned > 0,
         boardConfigured,
         statusCount: data.issueStatusByEmail[s.email],
       };
@@ -107,18 +116,25 @@ export function DeadlinesTab() {
   const teamRate = rate(totalOnTime, totalAssigned);
   const atRisk = rows.filter((x) => x.assigned > 0 && x.complianceRate < AT_RISK_THRESHOLD);
   const withoutBoard = rows.filter((x) => !x.boardConfigured);
+  const jiraRows = rows.filter((x) => !x.manual);
+  const ticketTotal = jiraRows.reduce((acc, x) => acc + (x.statusCount?.total ?? 0), 0);
+  const noDueTotal = jiraRows.reduce((acc, x) => acc + (x.statusCount?.noDueDate ?? 0), 0);
 
   const trendMonths = monthsInYear(periodYear(period));
-  const teamTrend = trendMonths.map((m) => {
-    let assigned = 0;
-    let onTime = 0;
-    for (const s of filteredStrategists) {
-      const c = sumMonths(data.byEmail, s.email, [m]);
-      assigned += c.assigned;
-      onTime += c.onTime;
-    }
-    return { label: getMonthShortLabel(m), value: rate(onTime, assigned) };
-  });
+  const teamTrend = trendMonths
+    .map((m) => {
+      let assigned = 0;
+      let onTime = 0;
+      for (const s of filteredStrategists) {
+        const c = sumMonths(data.byEmail, s.email, [m]);
+        assigned += c.assigned;
+        onTime += c.onTime;
+      }
+      return assigned > 0 ? { label: getMonthShortLabel(m), value: rate(onTime, assigned) } : null;
+    })
+    .filter((v): v is NonNullable<typeof v> => v !== null);
+  const ranked = rows.filter((x) => x.hasData);
+  const unranked = rows.filter((x) => !x.hasData);
 
   const deltaComments = filteredStrategists
     .map((s) => {
@@ -161,7 +177,9 @@ export function DeadlinesTab() {
         </div>
       )}
 
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+      <ManualDeadlinesNotice />
+
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <StatTile label="Cumplimiento de deadlines" value={`${teamRate}%`} tone={toneFor(teamRate)} />
         <StatTile label="Deadlines a tiempo" value={`${totalOnTime} / ${totalAssigned}`} sublabel="En el periodo seleccionado" />
         <StatTile
@@ -170,13 +188,19 @@ export function DeadlinesTab() {
           sublabel={`Cumplimiento < ${AT_RISK_THRESHOLD}%`}
           tone={atRisk.length > 0 ? "danger" : "good"}
         />
+        <StatTile
+          label="Incidencias sin fecha límite"
+          value={`${noDueTotal} de ${ticketTotal}`}
+          sublabel={noDueTotal > 0 ? "No cuentan para el cumplimiento: ponles fecha en Jira" : "Todas las incidencias tienen fecha límite"}
+          tone={noDueTotal > 0 ? "warning" : "good"}
+        />
       </div>
 
       <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
-        <div className="rounded-[var(--bp-radius-lg)] border border-[var(--bp-border)] bg-[var(--bp-surface)] p-4">
+        <div className="rounded-[var(--bp-radius-lg)] border border-[var(--bp-border)] bg-[var(--bp-surface)] p-4 flex flex-col">
           <h3 className="text-[13px] font-semibold text-[var(--bp-ink)]">Tendencia de cumplimiento</h3>
           <p className="mt-0.5 text-[11px] text-[var(--bp-ink-soft)]">Cumplimiento del equipo por mes, para el año seleccionado.</p>
-          <div className="mt-3">
+          <div className="mt-3 min-h-[160px] flex-1">
             <TrendSparkline points={teamTrend} color="var(--bp-cyan)" />
           </div>
         </div>
@@ -184,13 +208,22 @@ export function DeadlinesTab() {
           <h3 className="text-[13px] font-semibold text-[var(--bp-ink)]">Ranking por cumplimiento</h3>
           <p className="mt-0.5 text-[11px] text-[var(--bp-ink-soft)]">% de deadlines entregados a tiempo en el periodo.</p>
           <div className="mt-3">
-            <BarList items={rows.map((x) => ({ label: x.s.name, value: x.complianceRate, tone: toneFor(x.complianceRate) }))} />
+            {ranked.length === 0 ? (
+              <p className="text-[12px] text-[var(--bp-ink-soft)]">Sin información disponible para este periodo.</p>
+            ) : (
+              <BarList items={ranked.map((x) => ({ label: x.s.name, value: x.complianceRate, tone: toneFor(x.complianceRate) }))} />
+            )}
+            {unranked.length > 0 && ranked.length > 0 && (
+              <p className="mt-3 border-t border-[var(--bp-border)] pt-2 text-[11px] text-[var(--bp-ink-soft)]">
+                Sin información: {unranked.map((x) => x.s.name).join(", ")}.
+              </p>
+            )}
           </div>
         </div>
       </div>
 
       <div className="overflow-x-auto rounded-[var(--bp-radius-md)] border border-[var(--bp-border)]">
-        <table className="w-full min-w-[860px] border-collapse text-left text-[12px]">
+        <table className="w-full min-w-[1020px] border-collapse text-left text-[12px]">
           <thead>
             <tr className="border-b border-[var(--bp-border)] bg-[var(--bp-surface-alt)] text-[10px] uppercase tracking-[0.04em] text-[var(--bp-ink-soft)]">
               <th className="px-3 py-2">Estratega</th>
@@ -200,26 +233,36 @@ export function DeadlinesTab() {
               <th className="px-3 py-2 text-right">Total incidencias</th>
               <th className="px-3 py-2 text-right">En curso / revisión</th>
               <th className="px-3 py-2 text-right">Por hacer</th>
+              <th className="px-3 py-2 text-right">Vencidas abiertas</th>
+              <th className="px-3 py-2 text-right">Sin fecha límite</th>
               <th className="px-3 py-2 text-right">% Finalizadas</th>
             </tr>
           </thead>
           <tbody>
-            {rows.every((r) => r.assigned === 0 && (!r.statusCount || r.statusCount.total === 0)) ? (
+            {jiraRows.every((r) => r.assigned === 0 && (!r.statusCount || r.statusCount.total === 0)) && rows.every((r) => !r.manual || r.manualRate === null) ? (
               <tr>
-                <td colSpan={8} className="px-3 py-6 text-center text-[12px] text-[var(--bp-ink-soft)]">
+                <td colSpan={10} className="px-3 py-6 text-center text-[12px] text-[var(--bp-ink-soft)]">
                   Aún no hay incidencias en los tableros de Jira conectados para este periodo.
                 </td>
               </tr>
             ) : (
-              rows.map(({ s, assigned, onTime, complianceRate, boardConfigured, statusCount }, i) => (
+              rows.map(({ s, manual, manualRate, assigned, onTime, complianceRate, boardConfigured, statusCount }, i) => (
                 <tr key={s.id} className="bp-row-in border-b border-[var(--bp-border)] last:border-0" style={{ animationDelay: `${Math.min(i, 12) * 25}ms` }}>
                   <td className="px-3 py-2.5">
                     <StrategistAvatar strategist={s} />
                   </td>
-                  <td className="px-3 py-2.5 text-right font-mono">{onTime}</td>
-                  <td className="px-3 py-2.5 text-right font-mono">{assigned}</td>
+                  <td className="px-3 py-2.5 text-right font-mono">{manual ? "—" : onTime}</td>
+                  <td className="px-3 py-2.5 text-right font-mono">{manual ? "—" : assigned}</td>
                   <td className="px-3 py-2.5 text-right font-mono">
-                    {!boardConfigured ? (
+                    {manual ? (
+                      manualRate !== null ? (
+                        <>
+                          {manualRate}% <span className="text-[11px] text-[var(--bp-ink-soft)]">· manual</span>
+                        </>
+                      ) : (
+                        <span className="text-[11px] text-[var(--bp-ink-soft)]">Sin información disponible</span>
+                      )
+                    ) : !boardConfigured ? (
                       <span className="text-[11px] text-[var(--bp-ink-soft)]">Sin tablero</span>
                     ) : assigned > 0 ? (
                       `${complianceRate}%`
@@ -227,12 +270,16 @@ export function DeadlinesTab() {
                       "—"
                     )}
                   </td>
-                  {!boardConfigured ? (
-                    <td colSpan={4} className="px-3 py-2.5 text-right text-[11px] text-[var(--bp-ink-soft)]">
+                  {manual ? (
+                    <td colSpan={6} className="px-3 py-2.5 text-right text-[11px] text-[var(--bp-ink-soft)]">
+                      No usa Jira · se captura a mano en Admin
+                    </td>
+                  ) : !boardConfigured ? (
+                    <td colSpan={6} className="px-3 py-2.5 text-right text-[11px] text-[var(--bp-ink-soft)]">
                       Sin tablero
                     </td>
                   ) : !statusCount || statusCount.total === 0 ? (
-                    <td colSpan={4} className="px-3 py-2.5 text-right text-[11px] text-[var(--bp-ink-soft)]">
+                    <td colSpan={6} className="px-3 py-2.5 text-right text-[11px] text-[var(--bp-ink-soft)]">
                       Sin incidencias registradas
                     </td>
                   ) : (
@@ -243,6 +290,12 @@ export function DeadlinesTab() {
                       </td>
                       <td className="px-3 py-2.5 text-right font-mono">
                         {statusCount.todo} <span className="text-[11px] text-[var(--bp-ink-soft)]">({pct(statusCount.todo, statusCount.total)}%)</span>
+                      </td>
+                      <td className="px-3 py-2.5 text-right font-mono" style={{ color: statusCount.overdueOpen > 0 ? "var(--bp-danger)" : undefined }}>
+                        {statusCount.overdueOpen}
+                      </td>
+                      <td className="px-3 py-2.5 text-right font-mono" style={{ color: statusCount.noDueDate > 0 ? "#b8860b" : undefined }}>
+                        {statusCount.noDueDate}
                       </td>
                       <td className="px-3 py-2.5 text-right">
                         <span className="font-mono text-[15px] font-bold text-[var(--bp-green)]">{pct(statusCount.done, statusCount.total)}%</span>

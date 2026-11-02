@@ -8,7 +8,8 @@ import StrategistAvatar from "@/components/dashboard/StrategistAvatar";
 import { useEffectiveRecords } from "@/lib/strategistRecords";
 
 const LOW_SCORE_THRESHOLD = 65;
-const NO_DATA_LABEL = "Sin información disponible";
+// A period with no peer review is "NA": it is shown as such and never counted in the evaluation.
+const NO_DATA_LABEL = "NA";
 
 function toneFor(score: number): "good" | "warning" | "danger" {
   if (score >= 80) return "good";
@@ -31,7 +32,12 @@ export function PeerReviewsTab() {
   return (
     <div className="flex flex-col gap-4">
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-        <StatTile label="Peer review promedio" value={teamAvg !== null ? `${teamAvg}%` : NO_DATA_LABEL} tone={teamAvg !== null ? toneFor(teamAvg) : "neutral"} />
+        <StatTile
+          label="Peer review promedio"
+          value={teamAvg !== null ? `${teamAvg}%` : NO_DATA_LABEL}
+          tone={teamAvg !== null ? toneFor(teamAvg) : "neutral"}
+          sublabel={teamAvg === null ? "Sin peer review en el periodo: no cuenta en el desempeño" : undefined}
+        />
         <StatTile label="Evaluaciones recibidas" value={String(totalReviews)} sublabel="En el periodo seleccionado" />
         <StatTile
           label="Estrategas con score bajo"
@@ -47,7 +53,7 @@ export function PeerReviewsTab() {
           <p className="mt-0.5 text-[11px] text-[var(--bp-ink-soft)]">Distribución de comentarios de peer review del periodo.</p>
           <div className="mt-3">
             {positivos + constructivos === 0 ? (
-              <p className="text-[12px] text-[var(--bp-ink-soft)]">{NO_DATA_LABEL} para este periodo.</p>
+              <p className="text-[12px] text-[var(--bp-ink-soft)]">{NO_DATA_LABEL}: no hay peer review en este periodo.</p>
             ) : (
               <DonutChart
                 segments={[
@@ -65,7 +71,7 @@ export function PeerReviewsTab() {
           <p className="mt-0.5 text-[11px] text-[var(--bp-ink-soft)]">Score promedio recibido de pares en el periodo.</p>
           <div className="mt-3">
             {withData.length === 0 ? (
-              <p className="text-[12px] text-[var(--bp-ink-soft)]">{NO_DATA_LABEL} para este periodo.</p>
+              <p className="text-[12px] text-[var(--bp-ink-soft)]">{NO_DATA_LABEL}: no hay peer review en este periodo.</p>
             ) : (
               <BarList items={withData.map((x) => ({ label: x.s.name, value: x.r.peerReviewScore!, tone: toneFor(x.r.peerReviewScore!) }))} />
             )}
@@ -98,7 +104,7 @@ export function PeerReviewsTab() {
                   <td className="px-3 py-2.5 text-right font-mono">
                     {r.peerReviewScore !== null ? `${r.peerReviewScore}%` : <span className="text-[11px] text-[var(--bp-ink-soft)]">{NO_DATA_LABEL}</span>}
                   </td>
-                  <td className="px-3 py-2.5 text-right font-mono">{r.peerReviewCount ?? "—"}</td>
+                  <td className="px-3 py-2.5 text-right font-mono">{r.peerReviewCount ?? NO_DATA_LABEL}</td>
                 </tr>
               ))
             )}

@@ -1,0 +1,6 @@
+{
+  "crons": [
+    { "path": "/api/sync/figma", "schedule": "0 12 * * *" },
+    { "path": "/api/self-eval/tick", "schedule": "0 14 * * *" }
+  ]
+}

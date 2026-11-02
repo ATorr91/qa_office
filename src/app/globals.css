@@ -276,4 +276,28 @@ h1, h2, h3, h4 {
   body {
     background: white !important;
   }
+  /* A profile prints on a single page: tighten it a bit so it fits. */
+  .bp-onepager {
+    zoom: 0.8;
+  }
+}
+
+/* Horizontal gutters for page chrome (headers, main, footer). Content stays at most 1200px wide and centered on large
+   screens; the bars themselves (borders, backgrounds) still span the full width. */
+.bp-gutter {
+  padding-inline: 1.25rem;
+}
+@media (min-width: 768px) {
+  .bp-gutter {
+    padding-inline: max(2rem, calc((100% - 1200px) / 2));
+  }
+}
+
+/* Visible keyboard focus on links, buttons and selects across the app (inputs already style their own focus). */
+a:focus-visible,
+button:focus-visible,
+select:focus-visible,
+summary:focus-visible {
+  outline: 2px solid var(--bp-blue);
+  outline-offset: 2px;
 }

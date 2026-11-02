@@ -33,11 +33,11 @@ export function dashboardToMarkdown(
     lines.push("");
     lines.push(`- **Evaluación de desempeño:** ${r.performanceScore !== null ? `${r.performanceScore}%` : NO_DATA}`);
     lines.push(`- **Peer reviews:** ${r.peerReviewScore !== null ? `${r.peerReviewScore}%` : NO_DATA}${r.peerReviewCount !== null ? ` (${r.peerReviewCount} evaluaciones recibidas)` : ""}`);
-    lines.push(`- **Cumplimiento de OKRs:** ${r.okrCompletion !== null ? `${r.okrCompletion}%` : NO_DATA} · **Cumplimiento de KPIs:** ${r.kpiCompliance !== null ? `${r.kpiCompliance}%` : NO_DATA}`);
+    lines.push(`- **Cumplimiento de OKRs y KPIs:** ${r.okrCompletion !== null ? `${r.okrCompletion}%` : NO_DATA}`);
     lines.push(`- **Cumplimiento de deadlines (Jira):** ${r.deadlineComplianceRate !== null ? `${r.deadlineComplianceRate}% (${r.deadlinesOnTime}/${r.deadlinesAssigned})` : jiraDeadlines?.configured ? "sin deadlines vencidos en este periodo" : "Jira no conectado"}`);
     lines.push(`- **Cumplimiento de bitácoras (Google Sheets):** ${r.bitacoraComplianceRate !== null ? `${r.bitacoraComplianceRate}% (${r.bitacorasSubmitted}/${r.bitacorasExpected})` : NO_DATA}${r.lastBitacoraDate ? ` · última: ${r.lastBitacoraDate}` : ""}`);
     lines.push(`- **Calificación QA:** ${r.qaScore !== null ? `${r.qaScore}%` : NO_DATA}${r.qaReviewsCount !== null ? ` (${r.qaReviewsCount} entregables revisados, ${r.qaIssuesFound ?? 0} hallazgos)` : ""}`);
-    lines.push(`- **NPS de cliente:** ${r.npsScore !== null ? r.npsScore : NO_DATA}`);
+    lines.push(`- **NPS de cliente (aparte del desempeño):** ${r.npsScore !== null ? r.npsScore : NO_DATA}`);
     lines.push("");
     if (r.okrs.length > 0) {
       lines.push("**OKRs del periodo:**");

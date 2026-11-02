@@ -19,8 +19,6 @@ export interface BitacorasSyncResult {
   error: string | null;
   fetchedAt: string;
   byStrategistId: BitacorasByStrategistId;
-  /** Rows in the sheet whose "Estratega" name didn't match anyone in the current roster. */
-  unmatchedNames: string[];
   /** Strategists forced to 100% with a "no aplica" note — bitácora tracking doesn't apply to them right now. */
   notApplicableIds: string[];
 }
@@ -92,12 +90,36 @@ const MONTH_NAME_TO_NUM: Record<string, number> = {
   diciembre: 12,
 };
 
-/** Extracts the day number from the tail of a week header like "29 jun - 3 jul" or "3-7 ag" (the end date). */
-function parseWeekEndDay(header: string): number | null {
+const MONTH_ABBREV_TO_NUM: [string, number][] = [
+  ["ene", 1],
+  ["feb", 2],
+  ["mar", 3],
+  ["abr", 4],
+  ["may", 5],
+  ["jun", 6],
+  ["jul", 7],
+  ["ag", 8],
+  ["sep", 9],
+  ["set", 9],
+  ["oct", 10],
+  ["nov", 11],
+  ["dic", 12],
+];
+
+/**
+ * Parses the END of a week header like "29 jun - 3 jul", "3 - 7 ag" or "28 sep - 2 oct": its day and,
+ * when the header names it, its month (null when only the day is given, e.g. "6 - 10 jul" names jul but
+ * "10 - 14" would not). A week belongs to the month it ends in — "29 jun - 3 jul" is a July week — so the
+ * end month wins over the merged month-group header, which may not have been extended to a new month yet.
+ */
+function parseWeekEnd(header: string): { day: number; month: number | null } | null {
   const parts = String(header).split("-");
-  const last = parts[parts.length - 1]?.trim() ?? "";
-  const m = last.match(/^(\d{1,2})/);
-  return m ? Number(m[1]) : null;
+  const last = normalize(parts[parts.length - 1] ?? "");
+  const m = last.match(/^(\d{1,2})\s*([a-z]+)?/);
+  if (!m) return null;
+  const abbrev = m[2];
+  const month = abbrev ? (MONTH_ABBREV_TO_NUM.find(([prefix]) => abbrev.startsWith(prefix))?.[1] ?? null) : null;
+  return { day: Number(m[1]), month };
 }
 
 /**
@@ -150,13 +172,13 @@ export async function fetchBitacorasSync(strategists: Strategist[], year: number
 
   const creds = readCreds();
   if (!creds) {
-    return { configured: false, error: null, fetchedAt, byStrategistId: withNotApplicableOverride({}), unmatchedNames: [], notApplicableIds };
+    return { configured: false, error: null, fetchedAt, byStrategistId: withNotApplicableOverride({}), notApplicableIds };
   }
 
   try {
     const rows = await fetchSheetValues(creds);
     if (rows.length < 3) {
-      return { configured: true, error: null, fetchedAt, byStrategistId: withNotApplicableOverride({}), unmatchedNames: [], notApplicableIds };
+      return { configured: true, error: null, fetchedAt, byStrategistId: withNotApplicableOverride({}), notApplicableIds };
     }
 
     const monthHeaderRow = rows[0] ?? [];
@@ -175,26 +197,26 @@ export async function fetchBitacorasSync(strategists: Strategist[], year: number
     }
 
     const byStrategistId: BitacorasByStrategistId = {};
-    const unmatchedNames: string[] = [];
     const nowMs = Date.now();
 
     for (const row of dataRows) {
       const name = (row[0] ?? "").toString().trim();
       if (!name) continue;
       const strategist = matchStrategist(name, strategists);
-      if (!strategist) {
-        unmatchedNames.push(name);
-        continue;
-      }
+      // Rows for people who aren't on the roster are ignored entirely: nothing about them is shown or returned.
+      if (!strategist) continue;
 
       const perMonth: Partial<Record<MonthKey, { expected: number; submitted: number; lastDay: number }>> = {};
       for (let c = 2; c < weekHeaderRow.length; c++) {
         const monthNum = monthForColumn[c];
         if (!monthNum) continue;
-        const endDay = parseWeekEndDay(String(weekHeaderRow[c] ?? ""));
-        if (!endDay || !isWeekCountable(year, monthNum, endDay, nowMs, creds.trackingStartDate)) continue;
+        const end = parseWeekEnd(String(weekHeaderRow[c] ?? ""));
+        if (!end) continue;
+        const endDay = end.day;
+        const weekMonth = end.month ?? monthNum;
+        if (!isWeekCountable(year, weekMonth, endDay, nowMs, creds.trackingStartDate)) continue;
 
-        const mk = monthKey(year, monthNum);
+        const mk = monthKey(year, weekMonth);
         const bucket = (perMonth[mk] ??= { expected: 0, submitted: 0, lastDay: 0 });
         bucket.expected += 1;
         const checked = row[c] === true;
@@ -214,14 +236,14 @@ export async function fetchBitacorasSync(strategists: Strategist[], year: number
       );
     }
 
-    return { configured: true, error: null, fetchedAt, byStrategistId: withNotApplicableOverride(byStrategistId), unmatchedNames, notApplicableIds };
+    return { configured: true, error: null, fetchedAt, byStrategistId: withNotApplicableOverride(byStrategistId), notApplicableIds };
   } catch (err) {
     return {
       configured: true,
       error: err instanceof Error ? err.message : "Error desconocido al conectar con Google Sheets.",
       fetchedAt,
       byStrategistId: withNotApplicableOverride({}),
-      unmatchedNames: [],
+     
       notApplicableIds,
     };
   }
