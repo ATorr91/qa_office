@@ -3,7 +3,6 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import Logo from "@/components/brand/Logo";
 import Button from "@/components/ui/Button";
 import { dashboardToMarkdown, downloadTextFile } from "@/lib/dashboardExport";
 import { useDashboardFilters } from "@/lib/dashboardFilters";
@@ -18,12 +17,15 @@ import {
   monthKey,
   periodYear,
   YEARS,
+  type Employment,
 } from "@/lib/strategists";
 
 export function DashboardHeader() {
   const {
     searchQuery,
     setSearchQuery,
+    employment,
+    setEmployment,
     period,
     setPeriod,
     specificDate,
@@ -45,6 +47,8 @@ export function DashboardHeader() {
   const onProfile = pathname?.startsWith("/dashboard-estrategas/perfil") ?? false;
   // Admin picks its own month and person, so the dashboard's period filters and report download don't apply there either.
   const onAdmin = pathname?.startsWith("/dashboard-estrategas/admin") ?? false;
+  // The executive view only needs the period: no search, group or date filters and no dashboard report download.
+  const onBrain = pathname?.startsWith("/dashboard-estrategas/cerebro") ?? false;
 
   // Live sources load in the background; say so, and say which ones failed, instead of letting numbers shift silently.
   const syncing = jiraDeadlines === null || bitacorasSync === null || externalScores === null;
@@ -66,17 +70,14 @@ export function DashboardHeader() {
     window.print();
   }
 
-  const hasActiveFilters = searchQuery.trim() !== "" || period !== getDefaultPeriod() || !!specificDate;
+  const hasActiveFilters = searchQuery.trim() !== "" || employment !== "all" || period !== getDefaultPeriod() || !!specificDate;
   const selectedYear = periodYear(period);
 
   return (
     <header className="no-print z-40 bg-[var(--bp-surface)] shadow-[var(--bp-shadow-sm)] md:sticky md:top-0">
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--bp-border)] bp-gutter py-3">
-        <Link href="/" aria-label="Volver al portal" className="flex items-center">
-          <Logo variant="dark" style={{ transform: "scale(0.65)", transformOrigin: "left center" }} />
-        </Link>
         <span className="text-[13px] font-bold uppercase tracking-[0.04em] text-[var(--bp-ink)]">
-          Dashboard de Estrategas
+          {onBrain ? "Cerebro" : "Dashboard de Estrategas"}
         </span>
         <div className="flex items-center gap-3">
           {syncing && (
@@ -86,18 +87,18 @@ export function DashboardHeader() {
             </span>
           )}
           {!syncing && failedSources.length > 0 && (
-            <span role="status" title={`No se pudo leer: ${failedSources.join(", ")}. Los números de esas fuentes pueden estar incompletos.`} className="flex items-center gap-1.5 text-[11px] font-medium text-[var(--bp-danger)]">
+            <span role="status" data-tip={`No se pudo leer: ${failedSources.join(", ")}. Los números de esas fuentes pueden estar incompletos.`} className="flex items-center gap-1.5 text-[11px] font-medium text-[var(--bp-danger)]">
               <span aria-hidden>⚠</span> Sin conexión: {failedSources.join(", ")}
             </span>
           )}
           <span
-            title={`Los datos de este dashboard se actualizaron por última vez el ${lastUpdated}`}
+            data-tip={`Los datos de este dashboard se actualizaron por última vez el ${lastUpdated}`}
             className="hidden items-center gap-1.5 text-[11px] text-[var(--bp-ink-soft)] sm:flex"
           >
             <span className="h-1.5 w-1.5 rounded-full bg-[var(--bp-green)]" />
             Última actualización: <span className="font-mono text-[var(--bp-ink)]">{lastUpdated}</span>
           </span>
-          {!onDocs && !onProfile && !onAdmin && (
+          {!onDocs && !onProfile && !onAdmin && !onBrain && (
             <div className="relative">
               <Button
                 kind="outline"
@@ -139,7 +140,7 @@ export function DashboardHeader() {
       <div className="flex flex-wrap items-center gap-2 bp-gutter py-2.5">
         {!onDocs && !onAdmin && (
           <>
-          {!onProfile && (
+          {!onProfile && !onBrain && (
           <input
             type="text"
             value={searchQuery}
@@ -147,6 +148,18 @@ export function DashboardHeader() {
             placeholder="Buscar estratega por nombre o rol…"
             className="w-full rounded-[var(--bp-radius-sm)] border border-[var(--bp-border)] bg-[var(--bp-surface)] px-3 py-1.5 text-[13px] text-[var(--bp-ink)] outline-none placeholder:text-[var(--bp-ink-soft)] focus:border-[var(--bp-blue)] sm:max-w-xs"
           />
+          )}
+          {!onBrain && (
+          <select
+            value={employment}
+            onChange={(e) => setEmployment(e.target.value as Employment | "all")}
+            aria-label="Filtrar por tipo de estratega"
+            className="rounded-[var(--bp-radius-sm)] border border-[var(--bp-border)] bg-[var(--bp-surface)] px-2 py-1 text-[12px] font-medium text-[var(--bp-ink)] outline-none focus:border-[var(--bp-blue)]"
+          >
+            <option value="all">Nómina y proveedores</option>
+            <option value="nomina">Solo nómina</option>
+            <option value="proveedor">Solo proveedores</option>
+          </select>
           )}
           <select
             value={selectedYear}
@@ -196,6 +209,7 @@ export function DashboardHeader() {
               );
             })}
           </div>
+          {!onBrain && (
           <div className="flex items-center gap-1.5">
             <label className="text-[11px] font-medium uppercase tracking-[0.04em] text-[var(--bp-ink-soft)]">
               Fecha específica:
@@ -207,6 +221,7 @@ export function DashboardHeader() {
               className="rounded-[var(--bp-radius-sm)] border border-[var(--bp-border)] bg-[var(--bp-surface)] px-2 py-1 text-[12px] text-[var(--bp-ink)] outline-none focus:border-[var(--bp-blue)]"
             />
           </div>
+          )}
           {hasActiveFilters && (
             <button
               type="button"
@@ -219,7 +234,7 @@ export function DashboardHeader() {
           </>
         )}
         <nav className="ml-auto flex items-center gap-4">
-          {!onDashboard && (
+          {!onDashboard && !onAdmin && !onBrain && (
             <Link
               href="/dashboard-estrategas"
               className="bp-tap inline-flex items-center gap-1.5 rounded-[var(--bp-radius-sm)] border border-[var(--bp-border)] px-2.5 py-1 text-[12px] font-semibold text-[var(--bp-ink)] transition-colors duration-[var(--bp-dur)] hover:border-[var(--bp-blue)]"
@@ -227,18 +242,6 @@ export function DashboardHeader() {
               <span aria-hidden>←</span> Volver al dashboard
             </Link>
           )}
-          <Link
-            href="/dashboard-estrategas/documentacion"
-            className="text-[12px] font-semibold text-[var(--bp-blue-600)] underline-offset-2 hover:underline"
-          >
-            Documentación
-          </Link>
-          <Link
-            href="/dashboard-estrategas/admin"
-            className="text-[12px] font-semibold text-[var(--bp-blue-600)] underline-offset-2 hover:underline"
-          >
-            Admin
-          </Link>
         </nav>
       </div>
     </header>

@@ -5,7 +5,11 @@ import type { ReactNode } from "react";
 import ManualDeadlinesNotice from "@/components/dashboard/ManualDeadlinesNotice";
 import Badge, { type BadgeColor } from "@/components/ui/Badge";
 import { useDashboardFilters } from "@/lib/dashboardFilters";
+import { HEALTH_RULES } from "@/lib/projectHealth";
 import { useStrategistRecords } from "@/lib/strategistRecords";
+import { STRATEGISTS, type Employment } from "@/lib/strategists";
+
+const listNames = (employment: Employment) => new Intl.ListFormat("es", { style: "long", type: "conjunction" }).format(STRATEGISTS.filter((s) => s.employment === employment).map((s) => s.name));
 
 const ADMIN_HREF = "/dashboard-estrategas/admin";
 
@@ -76,7 +80,7 @@ export function DocumentationCards({
     storage === "db"
       ? { color: "success", text: "Base de datos conectada" }
       : storage === "local"
-        ? { color: "warning", text: "Guardado solo en este navegador" }
+        ? { color: "warning", text: "Solo en este navegador" }
         : { color: "neutral", text: "Cargando…" };
 
   const sheetsBadge: { color: BadgeColor; text: string } = !bitacorasSync
@@ -103,7 +107,7 @@ export function DocumentationCards({
     const last = externalScores.lastSync[source];
     return last
       ? { color: "success", text: `Sincronizado · ${new Date(last).toLocaleDateString("es-MX", { dateStyle: "medium" })}` }
-      : { color: "warning", text: "Esperando primera sincronización" };
+      : { color: "warning", text: "Sin sincronizar" };
   };
 
   const manualSource = "Admin → Captura rápida (Postgres)";
@@ -115,8 +119,8 @@ export function DocumentationCards({
       title: "Peer reviews",
       source: manualSource,
       badge: adminBadge,
-      measures: "Calificación de 0 a 100 que recibe cada estratega de sus pares en el mes, más el número de evaluaciones y los comentarios.",
-      how: "Cada mes capturado entra al promedio; un mes sin peer review se muestra como NA y no cuenta en la evaluación (no se toma como 0).",
+      measures: "Calificación de 0 a 100 de los pares, con evaluaciones y comentarios.",
+      how: "Sin peer review: NA, no cuenta (no es 0).",
       ctas: [adminCta],
     },
     {
@@ -124,8 +128,8 @@ export function DocumentationCards({
       title: "OKRs y KPIs",
       source: manualSource,
       badge: adminBadge,
-      measures: "Un solo cumplimiento de OKRs y KPIs de 0 a 100 por mes, más la lista de objetivos con su avance y estado.",
-      how: "Es una sola métrica dentro del promedio. El estado del OKR sale del avance: 72+ en curso, 50+ en riesgo, menos fuera de curso.",
+      measures: "Cumplimiento de 0 a 100 por mes, y avance por objetivo.",
+      how: "Estado: 72+ en curso, 50+ en riesgo, menos fuera de curso.",
       ctas: [adminCta],
     },
     {
@@ -133,47 +137,47 @@ export function DocumentationCards({
       title: "Bitácoras",
       source: `Hoja de Google · pestaña «${sheetTab}»`,
       badge: sheetsBadge,
-      measures: "Si cada estratega registró su bitácora semanal: una casilla marcada por semana en la hoja compartida del equipo.",
-      how: "Bitácoras entregadas ÷ esperadas. Solo cuentan semanas ya terminadas y desde el 31 de julio de 2026; cada semana cuenta en el mes en que termina. Quien no está en la hoja se captura a mano.",
+      measures: "Casilla semanal marcada en la hoja del equipo.",
+      how: "Entregadas ÷ esperadas. Solo semanas terminadas desde el 31 de julio de 2026, contadas en el mes en que terminan. Quien no está en la hoja: manual.",
       ctas: [
-        ...(sheetUrl ? [{ label: "Abrir la hoja de bitácoras", href: sheetUrl, external: true, primary: true }] : []),
+        ...(sheetUrl ? [{ label: "Hoja de bitácoras", href: sheetUrl, external: true, primary: true }] : []),
         { label: "Fuentes por persona", href: ADMIN_HREF },
       ],
     },
     {
       id: "qa",
       title: "Calificación QA",
-      source: "Correos «[Estatus QA]» de Gmail · se revisan a diario",
+      source: "Gmail «[Estatus QA]» · revisión diaria",
       badge: syncBadge("qa"),
-      measures: "La Tasa de Aprobación (Pass Rate) que QA reporta cada semana por proyecto, con su porcentaje de avance y su estatus (a tiempo, en riesgo o atrasado).",
-      how: "Promedio de los Pass Rate de los reportes del mes en las cuentas de cada estratega. Un reporte sin pruebas ejecutadas (0% de avance) no cuenta. Si un mes no tiene reportes, se usa lo capturado en Admin.",
-      ctas: [{ label: "Ver los correos en Gmail", href: qaMailUrl, external: true, primary: true }],
+      measures: "Pass Rate (Tasa de Aprobación) semanal por proyecto, con % de avance.",
+      how: "Promedio del mes. Con 0% de avance no cuenta. Sin reportes: se usa Admin.",
+      ctas: [{ label: "Correos en Gmail", href: qaMailUrl, external: true, primary: true }],
     },
     {
       id: "nps",
       title: "NPS / Cliente",
-      source: "Figma · archivo «Encuesta de Satisfacción de clientes», una página por proyecto",
+      source: "Figma «Encuesta de Satisfacción de clientes», por proyecto",
       badge: syncBadge("nps"),
-      measures: "La respuesta de 1 a 10 a «¿qué tanto nos recomendarías?» de cada encuesta, y su «Calificación ⭐» (promedio de las respuestas de 1 a 5).",
-      how: "NPS = % de promotores (9-10) − % de detractores (0-6) de las encuestas del mes en las cuentas del estratega; es una vista aparte de cómo percibe el cliente el trabajo y no entra al promedio de desempeño. Las páginas que son solo una captura de pantalla se registran a mano.",
-      ctas: [{ label: "Abrir el Figma de encuestas", href: figmaUrl, external: true, primary: true }, { label: "Capturar en Admin", href: ADMIN_HREF }],
+      measures: "Respuesta de 1 a 10 a «¿qué tanto nos recomendarías?» y «Calificación ⭐» (promedio de 1 a 5).",
+      how: "NPS = % promotores (9-10) − % detractores (0-6) del mes. Percepción del cliente: no entra al desempeño. Páginas solo con captura de pantalla: a mano.",
+      ctas: [{ label: "Figma de encuestas", href: figmaUrl, external: true, primary: true }, { label: "Capturar en Admin", href: ADMIN_HREF }],
     },
     {
       id: "csat",
       title: "CSAT",
       source: "Archivo «CUENTAS 2026» · pestaña «CSAT - Respuestas»",
       badge: syncBadge("csat"),
-      measures: "La satisfacción de los clientes por cuenta y por mes. El archivo es sensible y de acceso restringido: el panel solo recibe el promedio mensual por cuenta, nunca los clientes ni las respuestas individuales.",
-      how: "Promedio de las respuestas del mes en las cuentas de cada estratega. Es una vista aparte de cómo percibe el cliente el trabajo y no entra al promedio de desempeño.",
+      measures: "Satisfacción por cuenta y mes. Archivo restringido: el panel recibe solo promedios.",
+      how: "Promedio del mes. No entra al desempeño.",
       ctas: [{ label: "Ver el tab CSAT", href: "/dashboard-estrategas" }],
     },
     {
       id: "autoevaluacion",
       title: "Autoevaluación",
-      source: "Encuesta por correo · se crea y se sigue en el tab Autoevaluación (solo administración)",
-      badge: { color: "info", text: "Percepción del propio estratega" },
-      measures: "Cómo se califica cada estratega a sí mismo (1 a 5) en deadlines, bitácoras, QA, peer review, OKRs, CSAT y desempeño general, más sus respuestas abiertas.",
-      how: "No entra al promedio de desempeño: se compara con el dato real del mismo mes para ver quién se percibe mejor o peor de lo que muestran las métricas. Cada encuesta se manda con un enlace personal, dura 24 horas por defecto, manda recordatorios a quien no responde y puede repetirse cada mes.",
+      source: "Encuesta por correo (solo administración)",
+      badge: { color: "info", text: "Autopercepción" },
+      measures: "Autocalificación (1 a 5) en deadlines, bitácoras, QA, peer review, OKRs, CSAT y desempeño general.",
+      how: "No entra al promedio: se compara con el dato real del mes. Enlace personal, 24 horas, recordatorios.",
       ctas: [{ label: "Abrir el tab", href: "/dashboard-estrategas" }],
     },
     {
@@ -181,8 +185,8 @@ export function DocumentationCards({
       title: "Deadlines",
       source: "Jira · tablero(s) de cada estratega",
       badge: jiraBadge,
-      measures: "Incidencias asignadas a cada estratega con fecha límite, en los proyectos de Jira que se configuran en Admin.",
-      how: "A tiempo = cerrada hasta 1 día después de su fecha límite (el equipo suele cerrar al día siguiente); abierta y con ese día de gracia ya vencido cuenta como no cumplida. Con menos de 20 incidencias con fecha se marca «pocos datos»: un solo lote tardío cambia mucho el porcentaje. Las incidencias sin fecha límite no cuentan (se muestran aparte). Quien no usa Jira se captura a mano: ver el aviso de arriba.",
+      measures: "Incidencias de Jira con fecha límite (proyectos configurados en Admin).",
+      how: "A tiempo: cerrada hasta 1 día después de su fecha límite; abierta con ese día vencido: no cumplida. Menos de 20 incidencias con fecha: «pocos datos». Sin fecha límite no cuentan (se muestran aparte). Quien no usa Jira: captura manual.",
       ctas: [
         ...(jiraUrl ? [{ label: "Abrir Jira", href: jiraUrl, external: true, primary: true }] : []),
         { label: "Configurar tableros", href: ADMIN_HREF },
@@ -191,11 +195,29 @@ export function DocumentationCards({
     {
       id: "sprint",
       title: "Avance del sprint",
-      source: "Jira · sprint activo del tablero de cada proyecto activo (en vivo)",
+      source: "Jira · sprint activo por proyecto activo (en vivo)",
       badge: jiraBadge,
-      measures: "Cuánto del sprint que corre hoy ya está terminado, por proyecto y por épica. Solo cuenta lo que está en ese sprint: no el acumulado del proyecto ni de sprints anteriores.",
-      how: "% terminado = tickets en estado Finalizado ÷ tickets del sprint (las sub-tareas y las épicas no cuentan). Se compara con el % de días hábiles del sprint que ya pasaron: al día si va a 10 pts o menos por debajo, atrasado hasta 30 pts, en riesgo más allá. Si Jira sigue marcando activo un sprint que ya terminó, se avisa en lugar de mostrarlo. Se actualiza solo cada minuto.",
+      measures: "% terminado del sprint en curso, por proyecto y épica, sin acumulado.",
+      how: "Tickets Finalizado ÷ tickets del sprint (sin sub-tareas ni épicas) frente al % de días hábiles transcurridos: al día hasta 10 pts por debajo, atrasado hasta 30 pts, en riesgo más allá. Sprint vencido aún activo en Jira: se avisa. Cada minuto.",
       ctas: [...(jiraUrl ? [{ label: "Abrir Jira", href: jiraUrl, external: true, primary: true }] : [])],
+    },
+    {
+      id: "proyectos",
+      title: "Proyectos y semáforo de salud",
+      source: "Jira (sprint) + Admin → Proyectos y proceso",
+      badge: { color: "info", text: "Jira + captura manual" },
+      measures: "Etapa (de 5) y salud en cronograma, alcance y finanzas, con alertas por color.",
+      how: `Cronograma: sprint vs. calendario (al día verde, atrasado amarillo, en riesgo rojo); reportes sin respuesta tras su fecha límite (amarillo; rojo con más de ${HEALTH_RULES.reportRedAfterDays} días). Alcance: criticidad o bloqueo de severidad alta = rojo; otros bloqueos, riesgos altos, cambios sin aceptar o pendientes vencidos = amarillo. Finanzas: horas vs. tiempo transcurrido (más de ${HEALTH_RULES.hoursGapYellow} puntos = amarillo; más de ${HEALTH_RULES.hoursGapRed} o 100% = rojo); cambios de alcance aceptados (más de ${HEALTH_RULES.scopeChangeYellowPct}% de las horas = amarillo; más de ${HEALTH_RULES.scopeChangeRedPct}% = rojo); pagos (vencido sin facturar = amarillo; sin cobrar más de ${HEALTH_RULES.unpaidRedAfterDays} días = rojo). General = el peor. Sin datos: gris, no cuenta.`,
+      ctas: [{ label: "Capturar proyectos", href: `${ADMIN_HREF}#proyectos`, primary: true }, { label: "Ver el proceso", href: "/" }],
+    },
+    {
+      id: "tipos",
+      title: "Nómina y proveedores",
+      source: "Lista del equipo",
+      badge: { color: "success", text: "Fijo en el código" },
+      measures: "Nómina o proveedor. Ambos comparten las evaluaciones; los proveedores tendrán métricas adicionales por definir.",
+      how: `Nómina: ${listNames("nomina")}. Proveedores: ${listNames("proveedor")}. El filtro «Nómina y proveedores» limita las pestañas a un grupo. Checklist, aceptación a la primera y reportes a tiempo se calculan por persona, pero aún no puntúan.`,
+      ctas: [{ label: "Ver el proceso", href: "/", primary: true }],
     },
   ];
 
@@ -207,8 +229,7 @@ export function DocumentationCards({
         </div>
         <h1 className="mt-1.5 text-2xl font-bold text-[var(--bp-ink)]">De dónde sale cada calificación</h1>
         <p className="mt-1 max-w-3xl text-[13px] text-[var(--bp-ink-soft)]">
-          La «Evaluación de desempeño» de cada estratega es el promedio de cinco métricas de ejecución (peer reviews, OKRs y KPIs, bitácoras, QA y deadlines). NPS y CSAT se evalúan aparte, como visibilidad de lo que opina el cliente. Aquí está de dónde viene cada una, cómo se
-          calcula y a dónde ir para ver o cambiar el dato.
+          La «Evaluación de desempeño» promedia peer reviews, OKRs y KPIs, bitácoras, QA y deadlines. NPS y CSAT van aparte. Cada tarjeta indica fuente, cálculo y dónde cambiar el dato.
         </p>
       </div>
 
@@ -242,11 +263,11 @@ export function DocumentationCards({
       <section className="rounded-[var(--bp-radius-lg)] border border-[var(--bp-border)] bg-[var(--bp-surface)] p-4">
         <h2 className="text-[14px] font-semibold text-[var(--bp-ink)]">Cómo se calcula el promedio</h2>
         <ul className="mt-2 flex list-disc flex-col gap-1 pl-5 text-[12px] leading-relaxed text-[var(--bp-ink)]">
-          <li>Promedio simple de las métricas que sí tienen dato: peer review, OKRs y KPIs, deadlines, bitácoras y QA.</li>
-          <li>Una métrica sin dato no cuenta y no baja el promedio. Si no hay ninguna, se muestra «Sin información disponible».</li>
-          <li>En el periodo anual se combinan los meses con dato desde junio de 2026, que es cuando empezó el seguimiento (los peer reviews de junio ya están cargados).</li>
-          <li>Los datos en vivo (Jira, la hoja de bitácoras, los correos de QA y las encuestas de Figma) siempre mandan; un valor manual solo se usa cuando la fuente en vivo no tiene dato o la persona no la usa.</li>
-          <li>NPS y CSAT se muestran en sus propios tabs, en el grupo «Percepción del cliente», y la Autoevaluación en el suyo: ninguno entra a este promedio.</li>
+          <li>Promedio simple de las cinco métricas con dato.</li>
+          <li>Sin dato no cuenta ni baja el promedio. Sin ninguna: «Sin información disponible».</li>
+          <li>Anual: meses con dato desde junio de 2026 (inicio del seguimiento).</li>
+          <li>Los datos en vivo (Jira, hoja de bitácoras, correos de QA, Figma) mandan; el manual solo rellena si falta dato en vivo.</li>
+          <li>NPS, CSAT y Autoevaluación tienen su propio tab y no entran al promedio.</li>
         </ul>
         <div className="mt-3 flex flex-wrap gap-2">
           <CtaLink cta={{ label: "Ver el panel", href: "/dashboard-estrategas", primary: true }} />

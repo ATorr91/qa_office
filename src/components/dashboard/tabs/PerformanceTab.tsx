@@ -7,14 +7,24 @@ import ManualDeadlinesNotice from "@/components/dashboard/ManualDeadlinesNotice"
 import StatTile from "@/components/dashboard/StatTile";
 import StrategistAvatar from "@/components/dashboard/StrategistAvatar";
 import TrendSparkline from "@/components/dashboard/TrendSparkline";
+import Badge from "@/components/ui/Badge";
 import { useDashboardFilters } from "@/lib/dashboardFilters";
+import { processMetricsFor, type ProcessMetrics } from "@/lib/processMetrics";
+import { todayInMexico } from "@/lib/projectHours";
+import { useProjectProcess } from "@/lib/projectProcess";
 import { getEffectiveRecordForMonth, performanceComponents, useEffectiveRecords, useStrategistDataInputs, useStrategistRecords } from "@/lib/strategistRecords";
-import { getMonthShortLabel, monthsInYear, periodYear } from "@/lib/strategists";
+import { EMPLOYMENT_LABELS, getMonthShortLabel, monthsInYear, periodYear, type Employment } from "@/lib/strategists";
 
 const AT_RISK_THRESHOLD = 70;
 const NO_DATA_LABEL = "Sin información disponible";
 // Same five inputs, same order, as the average they roll up into (see performanceComponents).
 const COMPONENT_LABELS = ["Peer review", "OKRs y KPIs", "Deadlines", "Bitácoras", "QA"];
+
+const pctLabel = (v: number | null) => (v === null ? "—" : `${v}%`);
+const average = (values: (number | null)[]) => {
+  const present = values.filter((v): v is number => v !== null);
+  return present.length === 0 ? null : Math.round(present.reduce((a, b) => a + b, 0) / present.length);
+};
 
 function toneFor(score: number): "good" | "warning" | "danger" {
   if (score >= 85) return "good";
@@ -27,6 +37,22 @@ export function PerformanceTab() {
   const { period } = useDashboardFilters();
   const { filteredStrategists, recordsByStrategist, jiraDeadlines, bitacorasSync, externalScores } = useStrategistDataInputs();
   const { getSources } = useStrategistRecords();
+  const { projects } = useProjectProcess();
+  const today = todayInMexico();
+  const processById: Record<string, ProcessMetrics> = Object.fromEntries(rows.map(({ s }) => [s.id, processMetricsFor(s.id, projects, today)]));
+  const groups = (["nomina", "proveedor"] as Employment[])
+    .map((employment) => {
+      const members = rows.filter((x) => x.s.employment === employment);
+      return {
+        employment,
+        people: members.length,
+        performance: average(members.map((x) => x.r.performanceScore)),
+        checklist: average(members.map((x) => processById[x.s.id].checklistPct)),
+        firstTime: average(members.map((x) => processById[x.s.id].firstTimePct)),
+        onTime: average(members.map((x) => processById[x.s.id].onTimePct)),
+      };
+    })
+    .filter((g) => g.people > 0);
 
   const withData = rows.filter((x) => x.r.performanceScore !== null).sort((a, b) => b.r.performanceScore! - a.r.performanceScore!);
 
@@ -78,6 +104,30 @@ export function PerformanceTab() {
         />
       </div>
 
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+        {groups.map((g) => (
+          <section key={g.employment} className="rounded-[var(--bp-radius-lg)] border border-[var(--bp-border)] bg-[var(--bp-surface)] p-4" aria-label={`Resumen de ${EMPLOYMENT_LABELS[g.employment]}`}>
+            <div className="flex items-center justify-between gap-2">
+              <h3 className="text-[13px] font-semibold text-[var(--bp-ink)]">{g.employment === "nomina" ? "Estrategas de nómina" : "Estrategas proveedores"}</h3>
+              <span className="text-[11px] text-[var(--bp-ink-soft)]">{g.people} {g.people === 1 ? "persona" : "personas"}</span>
+            </div>
+            <dl className="mt-3 grid grid-cols-4 gap-2 text-center">
+              {[
+                ["Desempeño", g.performance],
+                ["Checklist", g.checklist],
+                ["Aceptación 1.ª", g.firstTime],
+                ["Reportes a tiempo", g.onTime],
+              ].map(([label, value]) => (
+                <div key={label as string}>
+                  <dt className="text-[10px] uppercase tracking-[0.04em] text-[var(--bp-ink-soft)]">{label as string}</dt>
+                  <dd className="mt-0.5 text-[18px] font-bold text-[var(--bp-ink)]">{pctLabel(value as number | null)}</dd>
+                </div>
+              ))}
+            </dl>
+          </section>
+        ))}
+      </div>
+
       <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
         <div className="rounded-[var(--bp-radius-lg)] border border-[var(--bp-border)] bg-[var(--bp-surface)] p-4 flex flex-col">
           <h3 className="text-[13px] font-semibold text-[var(--bp-ink)]">Tendencia de desempeño del equipo</h3>
@@ -100,7 +150,7 @@ export function PerformanceTab() {
       </div>
 
       <div className="overflow-x-auto rounded-[var(--bp-radius-md)] border border-[var(--bp-border)]">
-        <table className="w-full min-w-[760px] border-collapse text-left text-[12px]">
+        <table className="w-full min-w-[960px] border-collapse text-left text-[12px]">
           <thead>
             <tr className="border-b border-[var(--bp-border)] bg-[var(--bp-surface-alt)] text-[10px] uppercase tracking-[0.04em] text-[var(--bp-ink-soft)]">
               <th className="px-3 py-2">Estratega</th>
@@ -110,13 +160,16 @@ export function PerformanceTab() {
                 </th>
               ))}
               <th className="px-3 py-2 text-right">Desempeño</th>
+              <th className="px-3 py-2 text-right" data-tip="Parte del checklist de las etapas alcanzadas que está hecha. No entra todavía al puntaje de desempeño.">Checklist</th>
+              <th className="px-3 py-2 text-right" data-tip="Reportes que el cliente aceptó sin observaciones. No entra todavía al puntaje de desempeño.">Aceptación 1.ª</th>
+              <th className="px-3 py-2 text-right" data-tip="Reportes entregados antes de su fecha límite. No entra todavía al puntaje de desempeño.">A tiempo</th>
               <th className="px-3 py-2 text-right">Perfil</th>
             </tr>
           </thead>
           <tbody>
             {rows.length === 0 ? (
               <tr>
-                <td colSpan={COMPONENT_LABELS.length + 3} className="px-3 py-6 text-center text-[12px] text-[var(--bp-ink-soft)]">
+                <td colSpan={COMPONENT_LABELS.length + 6} className="px-3 py-6 text-center text-[12px] text-[var(--bp-ink-soft)]">
                   Aún no hay estrategas para este filtro.
                 </td>
               </tr>
@@ -127,11 +180,14 @@ export function PerformanceTab() {
                     <Link href={`/dashboard-estrategas/perfil/${s.id}`} className="block rounded-[var(--bp-radius-sm)] hover:opacity-80" title={`Ver el perfil de ${s.name}`}>
                       <StrategistAvatar strategist={s} />
                     </Link>
+                    <Badge color={s.employment === "nomina" ? "info" : "neutral"} dot={false} className="mt-1">
+                      {EMPLOYMENT_LABELS[s.employment]}
+                    </Badge>
                   </td>
                   {performanceComponents(r).map((c) => (
                     <td key={c.key} className="px-3 py-2.5 text-right font-mono">
                       {c.value !== null ? `${c.value}%` : c.key === "peer" ? "NA" : "—"}
-                      {c.key === "deadlines" && !getSources(s.id).jira && <span title="Se captura a mano: no usa Jira"> *</span>}
+                      {c.key === "deadlines" && !getSources(s.id).jira && <span data-tip="Se captura a mano: no usa Jira"> *</span>}
                       {c.key === "deadlines" && r.deadlinesAssigned > 0 && (
                         <>
                           <span className="ml-1 text-[10px] text-[var(--bp-ink-soft)]">{r.deadlinesOnTime}/{r.deadlinesAssigned}</span>
@@ -143,6 +199,11 @@ export function PerformanceTab() {
                   <td className="px-3 py-2.5 text-right font-mono">
                     {r.performanceScore !== null ? `${r.performanceScore}%` : <span className="text-[11px] text-[var(--bp-ink-soft)]">{NO_DATA_LABEL}</span>}
                   </td>
+                  {(["checklistPct", "firstTimePct", "onTimePct"] as const).map((k) => (
+                    <td key={k} className="px-3 py-2.5 text-right font-mono" data-tip={processById[s.id].trackedProjects === 0 ? "Sin proyectos con proceso capturado" : `${processById[s.id].trackedProjects} proyecto(s) con proceso capturado`}>
+                      {pctLabel(processById[s.id][k])}
+                    </td>
+                  ))}
                   <td className="px-3 py-2.5 text-right">
                     <Link
                       href={`/dashboard-estrategas/perfil/${s.id}`}
@@ -157,6 +218,10 @@ export function PerformanceTab() {
           </tbody>
         </table>
       </div>
+
+      <p className="text-[11px] text-[var(--bp-ink-soft)]">
+        Checklist, aceptación a la primera y reportes a tiempo se miden sobre los proyectos confirmados de cada persona que ya tienen el proceso capturado, no por mes, y por ahora no entran al puntaje de desempeño. Los proyectos con asignación provisional no cuentan.
+      </p>
 
       <ManualDeadlinesNotice compact />
 

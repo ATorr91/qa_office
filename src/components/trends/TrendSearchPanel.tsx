@@ -104,7 +104,7 @@ export function TrendSearchPanel({ category }: { category: string }) {
         <div className="flex items-center gap-1.5">
           <Tooltip text="Busca en un set de señales curadas manualmente por el equipo: cada fuente fue investigada y verificada como real antes de añadirse. No es una búsqueda en vivo del internet abierto — todavía. Escribe una idea completa: la búsqueda entiende frases, no solo palabras sueltas." />
           <span
-            title={`Fuentes verificadas manualmente · última actualización del set: ${DATASET_CURATED_AT}`}
+            data-tip={`Fuentes verificadas manualmente · última actualización del set: ${DATASET_CURATED_AT}`}
             className="flex items-center gap-1.5 text-[11px] text-[var(--bp-ink-soft)]"
           >
             <span className="h-1.5 w-1.5 rounded-full bg-[var(--bp-blue)]" />
@@ -143,7 +143,7 @@ export function TrendSearchPanel({ category }: { category: string }) {
         </Button>
         <button
           type="button"
-          title="Refrescar resultados"
+          data-tip="Refrescar resultados" aria-label="Refrescar resultados"
           onClick={runFetch}
           disabled={resultsLoading}
           className="bp-tap flex h-7 w-7 items-center justify-center rounded-[var(--bp-radius-sm)] border border-[var(--bp-border)] text-[var(--bp-ink-soft)] transition-transform duration-[var(--bp-dur-fast)] hover:scale-110 hover:border-[var(--bp-blue)] hover:text-[var(--bp-blue)] disabled:opacity-40"

@@ -132,7 +132,8 @@ export function SurveyDetailView({ id, onChanged, onClose }: { id: string; onCha
   const { survey, invites, responses, events } = detail;
   const ratings = survey.questions.filter((q) => q.type === "rating");
   const texts = survey.questions.filter((q) => q.type === "text");
-  const answeredIds = invites.filter((i) => responses[i.strategistId]).map((i) => i.strategistId);
+  // An invite can belong to someone who has since left the roster: their answers stay in the database but have no profile to compare with.
+  const answeredIds = invites.filter((i) => responses[i.strategistId] && STRATEGISTS.some((x) => x.id === i.strategistId)).map((i) => i.strategistId);
   const records = Object.fromEntries(
     answeredIds.map((sid) => {
       const s = STRATEGISTS.find((x) => x.id === sid)!;
@@ -194,7 +195,7 @@ export function SurveyDetailView({ id, onChanged, onClose }: { id: string; onCha
           <span className="font-mono text-[var(--bp-ink-soft)]">{survey.answered} de {survey.invited} ({pct}%)</span>
         </div>
         <div className="h-1.5 overflow-hidden rounded-full bg-[var(--bp-surface-alt)]">
-          <div className="h-full rounded-full bg-[var(--bp-green)] transition-all duration-500" style={{ width: `${pct}%` }} />
+          <div className="bp-bar h-full rounded-full bg-[var(--bp-green)] transition-all duration-500" style={{ width: `${pct}%` }} />
         </div>
       </div>
 
@@ -250,7 +251,7 @@ export function SurveyDetailView({ id, onChanged, onClose }: { id: string; onCha
                 <tr className="border-b border-[var(--bp-border)] bg-[var(--bp-surface-alt)] text-[10px] uppercase tracking-[0.04em] text-[var(--bp-ink-soft)]">
                   <th className="px-3 py-2">Estratega</th>
                   {ratings.map((q) => (
-                    <th key={q.id} className="px-3 py-2" title={q.label}>{q.dimension ? DIMENSION_LABELS[q.dimension] : q.label.slice(0, 24)}</th>
+                    <th key={q.id} className="px-3 py-2" data-tip={q.label}>{q.dimension ? DIMENSION_LABELS[q.dimension] : q.label.slice(0, 24)}</th>
                   ))}
                 </tr>
               </thead>

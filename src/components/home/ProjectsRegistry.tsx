@@ -556,7 +556,7 @@ export function ProjectsRegistry() {
                           type="button"
                           onClick={() => openModal({ mode: "edit", id: p.id })}
                           aria-label={`Editar ${p.title}`}
-                          title="Editar"
+                          data-tip="Editar"
                           className={`${iconBtn} hover:bg-white/10 hover:text-[var(--bp-cyan)]`}
                         >
                           <PencilIcon />
@@ -565,7 +565,7 @@ export function ProjectsRegistry() {
                           type="button"
                           onClick={() => setToDelete(p)}
                           aria-label={`Eliminar ${p.title}`}
-                          title="Eliminar"
+                          data-tip="Eliminar"
                           className={`${iconBtn} hover:bg-[rgba(255,143,176,0.14)] hover:text-[#ff8fb0]`}
                         >
                           <TrashIcon />

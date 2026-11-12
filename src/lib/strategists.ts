@@ -178,11 +178,20 @@ export interface ProjectAssignment {
   notes: string;
 }
 
+/** How the person works with BluePixel: on payroll, or an outside provider. Both share the dashboard's evaluations. */
+export type Employment = "nomina" | "proveedor";
+
+export const EMPLOYMENT_LABELS: Record<Employment, string> = {
+  nomina: "Nómina",
+  proveedor: "Proveedor",
+};
+
 export interface Strategist {
   id: string;
   name: string;
   role: string;
   email: string;
+  employment: Employment;
   avatarColor: string;
   /** Path under /public, or null when there is no photo yet (the avatar then shows initials). */
   photo: string | null;
@@ -190,18 +199,18 @@ export interface Strategist {
 
 const AVATAR_COLORS = ["var(--bp-blue)", "var(--bp-magenta)", "var(--bp-purple)", "var(--bp-green)", "var(--bp-cyan)"];
 
-// Roster real del equipo de estrategas (10 personas), sin datos ficticios asociados.
-const PROFILES: { id: string; name: string; role: string; email: string }[] = [
-  { id: "adriana-ruiz", name: "Adriana Ruiz", role: "Estratega", email: "adriana.ruiz@bluepixel.mx" },
-  { id: "alexis-aguilar", name: "Alexis Aguilar", role: "Estratega", email: "alexis.aguilar@bluepixel.mx" },
-  { id: "daniel-gamboa", name: "Daniel Gamboa", role: "Estratega", email: "daniel.gamboa@bluepixel.mx" },
-  { id: "daniel-morfin", name: "Daniel Morfin", role: "Estratega", email: "daniel.morfin@bluepixel.mx" },
-  { id: "johanna-quiroga", name: "Johanna Quiroga", role: "Estratega", email: "johanna.quiroga@bluepixel.mx" },
-  { id: "jorge-de-buen", name: "Jorge de Buen", role: "Estratega", email: "jorge@bluepixel.mx" },
-  { id: "lucero-cervantes", name: "Lucero Cervantes", role: "Estratega", email: "lucero.cervantes@bluepixel.mx" },
-  { id: "luis-rodriguez", name: "Luis Rodríguez", role: "Estratega", email: "luis.rodriguez@bluepixel.mx" },
-  { id: "camila", name: "Camila Mora", role: "Estratega", email: "camila@bluepixel.mx" },
-  { id: "montserrat-hernandez", name: "Montserrat Hernández", role: "Estratega", email: "montserrat.hernandez@bluepixel.mx" },
+// Roster real del equipo de estrategas (9 personas), sin datos ficticios asociados.
+const PROFILES: { id: string; name: string; role: string; email: string; employment: Employment }[] = [
+  { id: "adriana-ruiz", name: "Adriana Ruiz", role: "Estratega", email: "adriana.ruiz@bluepixel.mx", employment: "proveedor" },
+  { id: "alexis-aguilar", name: "Alexis Aguilar", role: "Estratega", email: "alexis.aguilar@bluepixel.mx", employment: "nomina" },
+  { id: "daniel-gamboa", name: "Daniel Gamboa", role: "Estratega", email: "daniel.gamboa@bluepixel.mx", employment: "proveedor" },
+  { id: "daniel-morfin", name: "Daniel Morfin", role: "Estratega", email: "daniel.morfin@bluepixel.mx", employment: "proveedor" },
+  { id: "jorge-de-buen", name: "Jorge de Buen", role: "Estratega", email: "jorge@bluepixel.mx", employment: "nomina" },
+  { id: "luis-rodriguez", name: "Luis Rodríguez", role: "Estratega", email: "luis.rodriguez@bluepixel.mx", employment: "proveedor" },
+  { id: "camila", name: "Camila Mora", role: "Estratega", email: "camila@bluepixel.mx", employment: "proveedor" },
+  { id: "montserrat-hernandez", name: "Montserrat Hernández", role: "Estratega", email: "montserrat.hernandez@bluepixel.mx", employment: "nomina" },
+  // Added last so nobody else's avatar color moves. Email and photo still to confirm; payroll because it is not on the provider list.
+  { id: "cano", name: "Cano", role: "Estratega", email: "cano@bluepixel.mx", employment: "nomina" },
 ];
 
 // Photos live in public/strategists/<id>.jpg (taken from the team's email signatures). Add the id here when a new one is dropped in.
@@ -210,9 +219,7 @@ const PHOTO_IDS = new Set([
   "alexis-aguilar",
   "camila",
   "daniel-gamboa",
-  "johanna-quiroga",
   "jorge-de-buen",
-  "lucero-cervantes",
   "luis-rodriguez",
   "montserrat-hernandez",
 ]);

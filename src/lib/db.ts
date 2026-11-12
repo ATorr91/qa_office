@@ -95,6 +95,32 @@ const SCHEMA = `
     detail text not null default '',
     at timestamptz not null default now()
   );
+  create table if not exists project_process (
+    project_id text primary key,
+    data jsonb not null,
+    updated_at timestamptz not null default now()
+  );
+  create table if not exists dashboard_settings (
+    key text primary key,
+    data jsonb not null,
+    updated_at timestamptz not null default now()
+  );
+  create table if not exists team_analysis (
+    month text primary key,
+    data jsonb not null,
+    created_at timestamptz not null default now()
+  );
+  create table if not exists tool_usage (
+    day date not null,
+    tool text not null,
+    strategist_id text not null,
+    project_id text not null default '',
+    units numeric not null,
+    unit text not null default '',
+    origin text not null default 'sync',
+    updated_at timestamptz not null default now(),
+    primary key (day, tool, strategist_id, project_id)
+  );
   create table if not exists email_outbox (
     id bigserial primary key,
     kind text not null,

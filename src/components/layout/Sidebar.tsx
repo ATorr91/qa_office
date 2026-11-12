@@ -15,7 +15,7 @@ export function Sidebar() {
 
   return (
     <aside className="hidden w-56 shrink-0 flex-col border-r border-[var(--bp-border)] bg-[var(--bp-surface)] px-3 py-4 md:flex">
-      <Link href="/" className="pl-1" aria-label="Volver al portal">
+      <Link href="/portal" className="pl-1" aria-label="Volver al portal">
         <Logo variant="dark" style={{ transform: "scale(0.72)", transformOrigin: "left center" }} />
       </Link>
       <nav className="mt-7 flex flex-col gap-0.5">
@@ -26,7 +26,7 @@ export function Sidebar() {
             <Link
               key={item.href}
               href={item.href}
-              className={`rounded-[var(--bp-radius-sm)] px-2.5 py-1.5 text-[13px] font-medium transition-colors duration-[var(--bp-dur)] ${
+              className={`rounded-[var(--bp-radius-sm)] px-2.5 py-1.5 text-[13px] font-medium transition-all duration-[var(--bp-dur)] hover:translate-x-0.5 ${
                 active
                   ? "bg-[var(--bp-blue-tint)] text-[var(--bp-blue-600)]"
                   : "text-[var(--bp-ink-soft)] hover:bg-[var(--bp-surface-alt)]"

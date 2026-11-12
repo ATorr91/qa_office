@@ -529,6 +529,16 @@ export function useEffectiveRecords(): { s: Strategist; r: EffectiveRecord }[] {
   });
 }
 
+/** Every strategist's effective record for the selected period, whatever the search and group filters say (for the executive view). */
+export function useAllEffectiveRecords(): { s: Strategist; r: EffectiveRecord }[] {
+  const { period, jiraDeadlines, bitacorasSync, externalScores } = useDashboardFilters();
+  const { recordsByStrategist } = useStrategistRecords();
+  return STRATEGISTS.map((s) => ({
+    s,
+    r: getEffectiveRecord(recordsByStrategist[s.id] ?? {}, deadlinesForEmail(jiraDeadlines, s.email), period, bitacorasForStrategist(bitacorasSync, s.id), externalForStrategist(externalScores, s.id)),
+  }));
+}
+
 /** One strategist's effective record for the selected period, regardless of the search filter (for their profile). */
 export function useEffectiveRecordFor(strategistId: string): { s: Strategist; r: EffectiveRecord } | null {
   const { period, jiraDeadlines, bitacorasSync, externalScores } = useDashboardFilters();

@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import Badge from "@/components/ui/Badge";
 
-export type SourceTab = "desempeno" | "peer" | "okr" | "deadlines" | "sprint" | "bitacoras" | "qa" | "nps" | "csat" | "autoevaluacion" | "historial";
+export type SourceTab = "desempeno" | "peer" | "okr" | "deadlines" | "sprint" | "proyectos" | "bitacoras" | "qa" | "nps" | "csat" | "autoevaluacion" | "historial";
 
 interface SourceLinks {
   bitacorasSheetUrl: string | null;
@@ -35,59 +35,55 @@ interface Note {
 
 const NOTES: Record<SourceTab, Note> = {
   desempeno: {
-    description:
-      "Promedio simple de las métricas de ejecución que sí tienen dato de cada estratega: peer review, OKRs y KPIs, deadlines, bitácoras y QA. Una métrica sin dato no cuenta ni baja el promedio. NPS y CSAT se evalúan aparte.",
+    description: "Promedio simple de peer review, OKRs y KPIs, deadlines, bitácoras y QA. Sin dato no cuenta. NPS y CSAT van aparte.",
     links: () => [{ label: "Cómo se calcula", href: DOCS_HREF }],
   },
   peer: {
-    description:
-      "Calificación de 0 a 100 que cada estratega recibe de sus pares en el mes. Se captura a mano en la sección Admin. Los meses sin peer review se muestran como NA y no cuentan en la evaluación.",
+    description: "Calificación de 0 a 100 de los pares en el mes, capturada en Admin. Sin peer review: NA, no cuenta.",
     links: () => [{ label: "Capturar en Admin", href: ADMIN_HREF }],
   },
   okr: {
-    description: "Cumplimiento de OKRs y KPIs de 0 a 100 por mes, más el avance de cada objetivo. Se captura a mano en la sección Admin.",
+    description: "OKRs y KPIs de 0 a 100 por mes, con avance por objetivo. Se captura en Admin.",
     links: () => [{ label: "Capturar en Admin", href: ADMIN_HREF }],
   },
   deadlines: {
-    description:
-      "Incidencias con fecha límite asignadas a cada estratega en Jira. Cuenta como a tiempo la que se cierra hasta 1 día después de su fecha límite; las que no tienen fecha límite no cuentan y se muestran aparte. Se consulta en vivo cada vez que abres el panel.",
+    description: "Incidencias de Jira con fecha límite. A tiempo: cerrada hasta 1 día después. Sin fecha límite no cuenta (se muestra aparte). En vivo.",
     links: (l) => (l?.jiraUrl ? [{ label: "Abrir Jira", href: l.jiraUrl, external: true }] : []),
   },
   sprint: {
-    description:
-      "Avance del sprint que está corriendo hoy en el tablero de Jira de cada proyecto activo: solo los tickets de ese sprint (sin sub-tareas y sin lo acumulado de sprints anteriores), por proyecto y por épica. Se compara el % terminado con el % de días hábiles del sprint que ya pasaron, para saber si va al día. Se lee en vivo y se actualiza solo cada minuto.",
+    description: "Sprint activo en Jira por proyecto y épica, solo sus tickets (sin sub-tareas). % terminado frente a % de días hábiles transcurridos. En vivo, cada minuto.",
     links: (l) => (l?.jiraUrl ? [{ label: "Abrir Jira", href: l.jiraUrl, external: true }] : []),
   },
-  bitacoras: {
+  proyectos: {
     description:
-      "Casilla semanal marcada en la hoja de bitácoras del equipo; cada semana cuenta en el mes en que termina. Se consulta en vivo cada vez que abres el panel.",
-    links: (l) => (l?.bitacorasSheetUrl ? [{ label: "Abrir la hoja de bitácoras", href: l.bitacorasSheetUrl, external: true }] : []),
+      "Etapa, checklist, reportes, objetivos SMART, hito semanal, riesgos, bloqueos, cambios de alcance, contrato y horas por proyecto. Semáforo: cronograma (sprint de Jira, reportes vencidos), alcance y finanzas (horas, pagos). Lo que no es de Jira se captura en Admin.",
+    links: () => [{ label: "Cómo se calcula", href: DOCS_HREF }, { label: "Capturar en Admin", href: ADMIN_HREF + "#proyectos" }],
+  },
+  bitacoras: {
+    description: "Casilla semanal en la hoja de bitácoras; cada semana cuenta en el mes en que termina. En vivo.",
+    links: (l) => (l?.bitacorasSheetUrl ? [{ label: "Hoja de bitácoras", href: l.bitacorasSheetUrl, external: true }] : []),
   },
   qa: {
-    description:
-      "Promedio de la Tasa de Aprobación (Pass Rate) de los correos «[Estatus QA]» que QA envía cada semana por proyecto. Un reporte sin pruebas ejecutadas (0% de avance) no cuenta. Se revisa a diario y se actualiza solo.",
-    links: (l) => (l ? [{ label: "Ver los correos en Gmail", href: l.qaMailUrl, external: true }] : []),
+    description: "Promedio del Pass Rate de los correos «[Estatus QA]» semanales por proyecto. Con 0% de avance no cuenta. Revisión diaria.",
+    links: (l) => (l ? [{ label: "Correos en Gmail", href: l.qaMailUrl, external: true }] : []),
   },
   nps: {
-    description:
-      "Respuesta de 1 a 10 a «¿qué tanto nos recomendarías?» en la encuesta de satisfacción de cada proyecto. NPS = % de promotores (9-10) − % de detractores (0-6). El archivo de Figma se lee a diario. Es una vista de cómo percibe el cliente el trabajo: no entra al promedio de desempeño.",
-    links: (l) => (l ? [{ label: "Abrir el Figma de encuestas", href: l.figmaUrl, external: true }] : []),
+    description: "Respuesta de 1 a 10 a «¿qué tanto nos recomendarías?» por proyecto. NPS = % promotores (9-10) − % detractores (0-6). Figma, lectura diaria. No entra al desempeño.",
+    links: (l) => (l ? [{ label: "Figma de encuestas", href: l.figmaUrl, external: true }] : []),
   },
   csat: {
-    description:
-      "Promedio mensual de las respuestas de CSAT de las cuentas de cada estratega. El archivo contiene información sensible y tiene acceso restringido, por eso aquí solo se muestran promedios, sin clientes ni respuestas individuales. No entra al promedio de desempeño.",
+    description: "Promedio mensual de CSAT por estratega. Archivo sensible: solo promedios, sin clientes ni respuestas. No entra al desempeño.",
     sourceName: "Archivo «CUENTAS 2026» · pestaña «CSAT - Respuestas»",
     restricted: true,
     links: () => [],
   },
   autoevaluacion: {
-    description:
-      "Encuesta que cada estratega recibe en su correo para calificarse a sí mismo, con 24 horas para responder, recordatorios automáticos y cierre al terminar el plazo. Sus respuestas se comparan con las métricas reales para ver cómo se perciben. Solo administración puede crear encuestas y ver respuestas.",
+    description: "Encuesta por correo de autocalificación: 24 horas, recordatorios automáticos. Se compara con las métricas reales. Solo administración la crea y ve respuestas.",
     links: () => [{ label: "Cómo funciona", href: DOCS_HREF }],
   },
   historial: {
-    description: "Resumen mes a mes de todas las métricas. Cada columna viene de la fuente que se indica en su pestaña.",
-    links: () => [{ label: "Ver documentación", href: DOCS_HREF }],
+    description: "Resumen mensual de todas las métricas; cada pestaña indica su fuente.",
+    links: () => [{ label: "Documentación", href: DOCS_HREF }],
   },
 };
 

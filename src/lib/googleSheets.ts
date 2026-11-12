@@ -23,9 +23,9 @@ export interface BitacorasSyncResult {
   notApplicableIds: string[];
 }
 
-// These two don't do weekly bitácoras right now — by explicit decision, treat them as fully
+// She doesn't do weekly bitácoras right now — by explicit decision, treat her as fully
 // compliant with a "no aplica" note instead of showing "sin información" for every period.
-const NOT_APPLICABLE_STRATEGIST_IDS = ["lucero-cervantes", "montserrat-hernandez"];
+const NOT_APPLICABLE_STRATEGIST_IDS = ["montserrat-hernandez"];
 
 interface GoogleCreds {
   email: string;

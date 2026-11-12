@@ -130,26 +130,6 @@ const HU = (why: string): Assignment[] => [
 const guess = (code: string, reason: string, name?: string): Assignment => ({ code, name, why: `Provisional · ${reason} · por confirmar`, provisional: true });
 
 export const ASSIGNMENTS: Record<string, Assignment[]> = {
-  "johanna-quiroga": [
-    { code: "347.03", why: `${BOARD} · ${creates("Cemex")} (214)` },
-    { code: "420.01", why: `${BOARD} · ${creates("APAC")} (170)` },
-    { code: "421.01", why: ACCOUNT },
-    { code: "426.00", why: creates("PMI") },
-    { code: "426.01", why: `${creates("PMI Colombia")} (63)` },
-    { code: "426.02", why: creates("PMI") },
-    { code: "427.01", why: creates("PMI") },
-    { code: "432.01", why: `${creates("Together Club")} (40)` },
-    { code: "435.01", why: `${creates("PMI")} (7)` },
-    { code: "415.01", why: `${creates("Naturgy")} (38)` },
-    guess("261.03", "misma célula que PMI, sin actividad de estrategas en Jira"),
-    guess("261.01", "mismo cliente que Magenta Nuevos Requerimientos"),
-  ],
-  "lucero-cervantes": [
-    { code: "420.01", why: BOARD },
-    { code: "421.01", why: ACCOUNT },
-    { code: "284.01", why: `${BOARD} · ${creates("Ikichu")} (31)` },
-    { code: "416.01", why: `${BOARD} · tickets asignados (25)` },
-  ],
   camila: [
     { code: "386.01", why: `${creates("Peakland")} (122)` },
     { code: "372.02", why: `${creates("Aquí hay trabajo")} (más de 800)` },
@@ -223,6 +203,32 @@ function find(a: Assignment): CatalogProject {
   return hit;
 }
 
+/** Stable id of a catalog project (code + name: two projects can share a code). Process data in the database is keyed by it. */
+export function projectIdOf(p: CatalogProject): string {
+  return `${p.code}${p.name ? `-${p.name}` : ""}`.toLowerCase().replace(/[^a-z0-9.]+/g, "-").replace(/-+$/g, "");
+}
+
+export function catalogProjectById(id: string): CatalogProject | undefined {
+  return PROJECT_CATALOG.find((p) => projectIdOf(p) === id);
+}
+
+/** Strategists assigned to a project (confirmed and provisional alike, as the profiles show them). */
+export function ownersOfProject(p: CatalogProject): string[] {
+  return Object.entries(ASSIGNMENTS)
+    .filter(([, list]) => list.some((a) => find(a) === p))
+    .map(([id]) => id);
+}
+
+/** Projects assigned to a strategist, in catalog order. */
+export function projectsOwnedBy(strategistId: string): CatalogProject[] {
+  return (ASSIGNMENTS[strategistId] ?? []).map(find);
+}
+
+/** Projects a strategist is confirmed on: provisional placements are guesses and never count for or against a person's evaluation. */
+export function confirmedProjectsOwnedBy(strategistId: string): CatalogProject[] {
+  return (ASSIGNMENTS[strategistId] ?? []).filter((a) => !a.provisional).map(find);
+}
+
 const STATUS_ORDER: Record<ProjectStatus, number> = { active: 0, planned: 1, paused: 2, completed: 3, inactive: 4 };
 
 /** The projects assigned to a strategist as the profile and Admin store them, active ones first. */
@@ -231,7 +237,7 @@ export function projectAssignmentsFor(strategistId: string): ProjectAssignment[]
     .map((a) => ({ a, p: find(a) }))
     .sort((x, y) => STATUS_ORDER[x.p.status] - STATUS_ORDER[y.p.status] || y.p.end.localeCompare(x.p.end))
     .map(({ a, p }) => ({
-      id: `${p.code}${p.name ? `-${p.name}` : ""}`.toLowerCase().replace(/[^a-z0-9.]+/g, "-").replace(/-+$/g, ""),
+      id: projectIdOf(p),
       projectName: p.name,
       client: p.client,
       role: "Estratega",

@@ -136,8 +136,9 @@ h1, h2, h3, h4 {
   animation: bp-scale-in 0.22s var(--bp-ease) both;
 }
 
+/* `backwards`, not `both`: once it has played, hover and focus transforms on the same element must be free to apply. */
 .bp-row-in {
-  animation: bp-fade-in 0.3s var(--bp-ease) both;
+  animation: bp-fade-in 0.3s var(--bp-ease) backwards;
 }
 
 .bp-tap {
@@ -300,4 +301,320 @@ select:focus-visible,
 summary:focus-visible {
   outline: 2px solid var(--bp-blue);
   outline-offset: 2px;
+}
+
+/* ───────── Motion system ─────────
+   One vocabulary for the whole app: controls answer the pointer, lists arrive in sequence, bars and numbers grow into place, and
+   tooltips share one look. Everything is progressive: without support or with reduced motion the final state is what shows. */
+
+:root {
+  interpolate-size: allow-keywords;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  html {
+    scroll-behavior: smooth;
+  }
+}
+
+/* Base layer, so any utility class on an element still wins over these defaults. */
+@layer base {
+  button:not(:disabled),
+  [role="button"],
+  [role="tab"],
+  summary,
+  select {
+    cursor: pointer;
+  }
+  button,
+  a,
+  summary,
+  select,
+  input,
+  textarea {
+    transition-property: color, background-color, border-color, box-shadow, transform, opacity;
+    transition-duration: var(--bp-dur-fast);
+    transition-timing-function: var(--bp-ease);
+  }
+  button:not(:disabled):active,
+  [role="tab"]:active {
+    transform: scale(0.97);
+  }
+  input[type="checkbox"]:active,
+  input[type="radio"]:active {
+    transform: scale(0.82);
+  }
+  input:focus-visible,
+  textarea:focus-visible,
+  select:focus-visible {
+    box-shadow: 0 0 0 3px var(--bp-blue-tint);
+  }
+}
+
+/* Tooltip (TooltipHost). The wrapper is positioned by script; the bubble only animates. */
+@keyframes bp-tip-in {
+  from {
+    opacity: 0;
+    transform: translateY(var(--tip-shift, 4px)) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.bp-tip {
+  position: relative;
+  max-width: min(260px, calc(100vw - 16px));
+  border-radius: var(--bp-radius-sm);
+  background: var(--bp-ink);
+  padding: 6px 9px;
+  font-size: 11.5px;
+  line-height: 1.45;
+  color: #fff;
+  box-shadow: var(--bp-shadow-md), 0 0 0 1px rgba(255, 255, 255, 0.12);
+  animation: bp-tip-in 150ms var(--bp-ease) both;
+}
+.bp-tip[data-place="top"] {
+  --tip-shift: 4px;
+  transform-origin: var(--arrow-x, 50%) 100%;
+}
+.bp-tip[data-place="bottom"] {
+  --tip-shift: -4px;
+  transform-origin: var(--arrow-x, 50%) 0;
+}
+.bp-tip-arrow {
+  position: absolute;
+  left: var(--arrow-x, 50%);
+  width: 8px;
+  height: 8px;
+  margin-left: -4px;
+  background: var(--bp-ink);
+  transform: rotate(45deg);
+}
+.bp-tip[data-place="top"] .bp-tip-arrow {
+  bottom: -4px;
+}
+.bp-tip[data-place="bottom"] .bp-tip-arrow {
+  top: -4px;
+}
+
+/* Blocks that ease in as they scroll into view. The default state is visible: this only runs where scroll timelines exist. */
+@keyframes bp-reveal {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@supports (animation-timeline: view()) {
+  .bp-reveal {
+    animation: bp-reveal linear both;
+    animation-timeline: view();
+    animation-range: entry 0% entry 240px;
+  }
+}
+
+/* Children of a list or grid arrive one after another (first twelve; the rest arrive with the last). */
+.bp-stagger > * {
+  animation: bp-fade-in 0.38s var(--bp-ease) backwards;
+  animation-delay: calc(var(--i, 11) * 45ms);
+}
+.bp-stagger > :nth-child(1) { --i: 0; }
+.bp-stagger > :nth-child(2) { --i: 1; }
+.bp-stagger > :nth-child(3) { --i: 2; }
+.bp-stagger > :nth-child(4) { --i: 3; }
+.bp-stagger > :nth-child(5) { --i: 4; }
+.bp-stagger > :nth-child(6) { --i: 5; }
+.bp-stagger > :nth-child(7) { --i: 6; }
+.bp-stagger > :nth-child(8) { --i: 7; }
+.bp-stagger > :nth-child(9) { --i: 8; }
+.bp-stagger > :nth-child(10) { --i: 9; }
+.bp-stagger > :nth-child(11) { --i: 10; }
+.bp-stagger > :nth-child(12) { --i: 11; }
+
+/* Cards that rise a little under the pointer (fine pointers only). */
+@media (hover: hover) {
+  .bp-lift {
+    transition:
+      transform var(--bp-dur) var(--bp-ease),
+      border-color var(--bp-dur) var(--bp-ease),
+      box-shadow var(--bp-dur) var(--bp-ease);
+  }
+  .bp-lift:hover {
+    transform: translateY(-2px);
+    border-color: color-mix(in srgb, var(--bp-blue) 50%, var(--bp-border));
+    box-shadow: var(--bp-shadow-sm);
+  }
+}
+
+/* Chips that link elsewhere. */
+.bp-link-chip {
+  transition:
+    transform var(--bp-dur-fast) var(--bp-ease),
+    filter var(--bp-dur-fast) var(--bp-ease);
+}
+.bp-link-chip:hover {
+  transform: translateY(-1px);
+  filter: brightness(0.95);
+}
+
+/* Progress fills draw from the left when they first appear. */
+@keyframes bp-bar-grow {
+  from {
+    transform: scaleX(0);
+  }
+}
+.bp-bar {
+  transform-origin: left center;
+  animation: bp-bar-grow 0.7s var(--bp-ease) both;
+}
+
+/* Active tab underline draws in. */
+@keyframes bp-underline-in {
+  from {
+    transform: scaleX(0);
+  }
+}
+.bp-underline {
+  transform-origin: left center;
+  animation: bp-underline-in 0.24s var(--bp-ease) both;
+}
+
+/* Whole numbers count up to their value. The real text stays in the page for assistive tech (see CountUp). */
+@property --bp-n {
+  syntax: "<integer>";
+  inherits: false;
+  initial-value: 0;
+}
+@keyframes bp-count {
+  from {
+    --bp-n: 0;
+  }
+}
+.bp-count {
+  animation: bp-count 0.9s var(--bp-ease) both;
+  counter-reset: bp-n var(--bp-n);
+}
+.bp-count::after {
+  content: counter(bp-n) var(--bp-suffix, "");
+}
+
+/* A soft ring that asks for attention (red lights, the stage in progress). */
+@keyframes bp-ring {
+  0% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--bp-ring, var(--bp-danger)) 55%, transparent);
+  }
+  70%,
+  100% {
+    box-shadow: 0 0 0 7px transparent;
+  }
+}
+.bp-pulse {
+  animation: bp-ring 1.9s ease-out infinite;
+}
+
+/* Native accordions open and close smoothly where the browser can animate their content. */
+details::details-content {
+  block-size: 0;
+  overflow: clip;
+  transition:
+    block-size 0.26s var(--bp-ease),
+    content-visibility 0.26s allow-discrete;
+}
+details[open]::details-content {
+  block-size: auto;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bp-reveal,
+  .bp-bar,
+  .bp-underline,
+  .bp-count,
+  .bp-pulse,
+  .bp-tip,
+  .bp-stagger > * {
+    animation: none !important;
+  }
+  .bp-lift:hover,
+  .bp-link-chip:hover {
+    transform: none;
+  }
+  details::details-content {
+    transition: none;
+  }
+}
+
+@media print {
+  .bp-reveal,
+  .bp-stagger > *,
+  .bp-bar {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+}
+
+/* Markdown laid out for printing (the PDF export of a stage, the timeline or the whole process). */
+.bp-md {
+  color: #111;
+  font-size: 11pt;
+  line-height: 1.45;
+}
+.bp-md h1 {
+  margin: 0 0 8pt;
+  font-size: 20pt;
+}
+.bp-md h2 {
+  margin: 18pt 0 6pt;
+  font-size: 15pt;
+  break-after: avoid;
+}
+.bp-md h3 {
+  margin: 12pt 0 4pt;
+  font-size: 12pt;
+  break-after: avoid;
+}
+.bp-md p {
+  margin: 0 0 6pt;
+}
+.bp-md ul,
+.bp-md ol {
+  margin: 0 0 8pt;
+  padding-left: 18pt;
+}
+.bp-md ul {
+  list-style: disc;
+}
+.bp-md ol {
+  list-style: decimal;
+}
+.bp-md li {
+  margin-bottom: 2pt;
+  break-inside: avoid;
+}
+.bp-md code {
+  font-family: ui-monospace, monospace;
+  font-size: 0.92em;
+}
+.bp-md table {
+  width: 100%;
+  margin: 0 0 10pt;
+  border-collapse: collapse;
+  font-size: 9.5pt;
+}
+.bp-md th,
+.bp-md td {
+  border: 1px solid #bbb;
+  padding: 3pt 5pt;
+  text-align: left;
+  vertical-align: top;
+}
+.bp-md th {
+  background: #eee;
+}
+.bp-md tr {
+  break-inside: avoid;
 }

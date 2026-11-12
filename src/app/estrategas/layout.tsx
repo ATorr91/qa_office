@@ -9,7 +9,7 @@ export default function EstrategasLayout({ children }: { children: React.ReactNo
       <KnowledgeProvider>
         <div className="min-h-screen bg-[var(--bp-surface-alt)]">
           <header className="flex items-center justify-between border-b border-[var(--bp-border)] bg-[var(--bp-surface)] bp-gutter py-3">
-            <Link href="/" aria-label="Volver al portal">
+            <Link href="/portal" aria-label="Volver al portal">
               <Logo variant="dark" style={{ transform: "scale(0.65)", transformOrigin: "left center" }} />
             </Link>
             <div className="flex items-center gap-2 text-[13px] font-medium text-[var(--bp-ink-soft)]">

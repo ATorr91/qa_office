@@ -7,9 +7,11 @@ import ManualDeadlinesNotice from "@/components/dashboard/ManualDeadlinesNotice"
 import ImportantComments from "@/components/dashboard/ImportantComments";
 import LowSampleBadge from "@/components/dashboard/LowSampleBadge";
 import StrategistAvatar from "@/components/dashboard/StrategistAvatar";
+import StrengthsWeaknesses from "@/components/dashboard/StrengthsWeaknesses";
 import TrendSparkline from "@/components/dashboard/TrendSparkline";
 import { scoreColor } from "@/components/dashboard/admin/ScoreBreakdown";
 import Badge from "@/components/ui/Badge";
+import CountUp from "@/components/ui/CountUp";
 import { ACCOUNTS } from "@/lib/accounts";
 import { PROJECT_CATALOG } from "@/lib/projectCatalog";
 import { useDashboardFilters } from "@/lib/dashboardFilters";
@@ -20,7 +22,7 @@ import {
   useStrategistRecords,
 } from "@/lib/strategistRecords";
 import { importantComments } from "@/lib/npsComments";
-import { getMonthShortLabel, isBeforeTrackingStart, PROJECT_STATUS_LABELS, STRATEGISTS, type ProjectStatus, getPeriodLabel, monthsForPeriod, monthsInYear, OKR_STATUS_LABELS, periodYear, type OkrStatus } from "@/lib/strategists";
+import { EMPLOYMENT_LABELS, getMonthShortLabel, isBeforeTrackingStart, PROJECT_STATUS_LABELS, STRATEGISTS, type ProjectStatus, getPeriodLabel, monthsForPeriod, monthsInYear, OKR_STATUS_LABELS, periodYear, type OkrStatus } from "@/lib/strategists";
 
 const NO_DATA = "Sin información disponible";
 const CARD = "rounded-[var(--bp-radius-lg)] border border-[var(--bp-border)] bg-[var(--bp-surface)] p-4 print:break-inside-avoid print:p-3";
@@ -39,10 +41,10 @@ function Card({ title, hint, children, className = "" }: { title: string; hint?:
 
 function Metric({ label, value, detail, color }: { label: string; value: string; detail: string; color?: string }) {
   return (
-    <div className="rounded-[var(--bp-radius-md)] border border-[var(--bp-border)] px-3 py-2.5">
+    <div className="rounded-[var(--bp-radius-md)] border border-[var(--bp-border)] px-3 py-2.5 transition-colors duration-[var(--bp-dur)] hover:border-[var(--bp-blue)]">
       <div className="text-[10px] font-semibold uppercase tracking-[0.04em] text-[var(--bp-ink-soft)]">{label}</div>
       <div className="mt-0.5 text-xl font-bold tabular-nums" style={{ color: color ?? "var(--bp-ink)" }}>
-        {value}
+        <CountUp key={value} value={value} />
       </div>
       <div className="mt-0.5 text-[11px] leading-snug text-[var(--bp-ink-soft)]">{detail}</div>
     </div>
@@ -136,7 +138,12 @@ export function StrategistOnePager({ strategistId }: { strategistId: string }) {
         <div className="flex min-w-0 flex-wrap items-center gap-x-4 gap-y-2">
           <StrategistAvatar strategist={s} size={52} />
           <div className="min-w-0 text-[12px] text-[var(--bp-ink-soft)]">
-            <div className="break-all">{s.email}</div>
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="break-all">{s.email}</span>
+              <Badge color={s.employment === "nomina" ? "info" : "neutral"} dot={false}>
+                {EMPLOYMENT_LABELS[s.employment]}
+              </Badge>
+            </div>
             <div className="mt-0.5">
               Periodo: <strong className="text-[var(--bp-ink)]">{getPeriodLabel(period)}</strong> · Fuentes: Jira {sources.jira ? "✓" : "manual"} · Bitácoras{" "}
               {sources.bitacoras ? "✓" : "manual"}
@@ -147,7 +154,7 @@ export function StrategistOnePager({ strategistId }: { strategistId: string }) {
           <div className="sm:text-right">
             <div className="text-[10px] font-semibold uppercase tracking-[0.04em] text-[var(--bp-ink-soft)]">Evaluación de desempeño</div>
             <div className="text-4xl font-bold tabular-nums leading-tight" style={{ color: scoreColor(r.performanceScore) }}>
-              {r.performanceScore !== null ? `${r.performanceScore}%` : "Sin datos"}
+              {r.performanceScore !== null ? <CountUp key={r.performanceScore} value={`${r.performanceScore}%`} /> : "Sin datos"}
             </div>
             <div className="text-[11px] text-[var(--bp-ink-soft)]">
               {counted} de {components.length} métricas con dato
@@ -176,6 +183,8 @@ export function StrategistOnePager({ strategistId }: { strategistId: string }) {
           ))}
         </div>
       </Card>
+
+      <StrengthsWeaknesses strategistId={s.id} record={r} />
 
       <div className="grid grid-cols-1 gap-3 lg:grid-cols-5 print:grid-cols-5">
         <Card title="Tendencia de desempeño" hint="Promedio por mes del año seleccionado." className="flex flex-col lg:col-span-2 print:col-span-2">

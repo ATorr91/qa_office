@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Red_Hat_Display, Open_Sans, Dela_Gothic_One } from "next/font/google";
+import TooltipHost from "@/components/ui/TooltipHost";
 import { ProjectsProvider } from "@/lib/store";
 import "./globals.css";
 
@@ -32,10 +33,12 @@ export default function RootLayout({
   return (
     <html
       lang="es"
+      data-scroll-behavior="smooth"
       className={`${redHatDisplay.variable} ${openSans.variable} ${delaGothicOne.variable} antialiased`}
     >
       <body>
         <ProjectsProvider>{children}</ProjectsProvider>
+        <TooltipHost />
       </body>
     </html>
   );

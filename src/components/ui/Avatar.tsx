@@ -43,7 +43,9 @@ export function Avatar({
     <span
       className={`flex shrink-0 items-center justify-center rounded-full font-semibold text-white ${SIZE_CLASSES[size]} ${className}`}
       style={{ backgroundImage: `linear-gradient(135deg, ${from}, ${to})` }}
-      title={name}
+      data-tip={name}
+      role="img"
+      aria-label={name}
     >
       {initialsOf(name)}
     </span>

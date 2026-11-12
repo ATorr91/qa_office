@@ -81,6 +81,16 @@ export const SEED_PROJECTS: PortalProject[] = [
     createdAt: -2,
   },
   {
+    id: "seed-proceso-estrategas",
+    href: "/",
+    title: "Proceso de Estrategas",
+    project: "proceso-estrategas",
+    description:
+      "Borrador del nuevo proceso en cinco etapas (Discovery, Build, Testing, Entrega y FutureProof): checklist, documento de aceptación del cliente, SOPs, skills, agentes y cómo se conecta al dashboard.",
+    owner: "",
+    createdAt: -2.5,
+  },
+  {
     id: "seed-mapa-valor-estrategas",
     href: "/mapa-valor-estrategas",
     title: "Mapa de Valor de Estrategas",

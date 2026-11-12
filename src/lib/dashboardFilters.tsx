@@ -6,6 +6,7 @@ import {
   getDefaultPeriod,
   monthFromDate,
   STRATEGISTS,
+  type Employment,
   type MonthKey,
   type Period,
   type Strategist,
@@ -71,6 +72,9 @@ export interface BitacorasSyncResponse {
 interface DashboardFiltersValue {
   searchQuery: string;
   setSearchQuery: (q: string) => void;
+  /** Show only payroll or only provider strategists ("all" shows everyone). */
+  employment: Employment | "all";
+  setEmployment: (e: Employment | "all") => void;
   period: Period;
   setPeriod: (p: Period) => void;
   specificDate: string | null;
@@ -94,6 +98,7 @@ const DashboardFiltersContext = createContext<DashboardFiltersValue | null>(null
 
 export function DashboardFiltersProvider({ children }: { children: ReactNode }) {
   const [searchQuery, setSearchQuery] = useState("");
+  const [employment, setEmployment] = useState<Employment | "all">("all");
   const [period, setPeriodState] = useState<Period>(getDefaultPeriod());
   const [specificDate, setSpecificDateState] = useState<string | null>(null);
   const [jiraDeadlines, setJiraDeadlines] = useState<JiraDeadlinesResponse | null>(null);
@@ -210,6 +215,7 @@ export function DashboardFiltersProvider({ children }: { children: ReactNode }) 
 
   function clearFilters() {
     setSearchQuery("");
+    setEmployment("all");
     setPeriodState(getDefaultPeriod());
     setSpecificDateState(null);
   }
@@ -228,16 +234,17 @@ export function DashboardFiltersProvider({ children }: { children: ReactNode }) 
 
   const filteredStrategists = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
-    if (q === "") return STRATEGISTS;
     return STRATEGISTS.filter(
-      (s) => s.name.toLowerCase().includes(q) || s.role.toLowerCase().includes(q),
+      (s) => (employment === "all" || s.employment === employment) && (q === "" || s.name.toLowerCase().includes(q) || s.role.toLowerCase().includes(q)),
     );
-  }, [searchQuery]);
+  }, [searchQuery, employment]);
 
   const value = useMemo<DashboardFiltersValue>(
     () => ({
       searchQuery,
       setSearchQuery,
+      employment,
+      setEmployment,
       period,
       setPeriod,
       specificDate,
@@ -253,7 +260,7 @@ export function DashboardFiltersProvider({ children }: { children: ReactNode }) 
       externalScores,
       refreshExternalScores,
     }),
-    [searchQuery, period, specificDate, filteredStrategists, jiraDeadlines, effectiveBitacorasSync, externalScores],
+    [searchQuery, employment, period, specificDate, filteredStrategists, jiraDeadlines, effectiveBitacorasSync, externalScores],
   );
 
   return <DashboardFiltersContext.Provider value={value}>{children}</DashboardFiltersContext.Provider>;

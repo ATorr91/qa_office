@@ -1,13 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import StatTile from "@/components/dashboard/StatTile";
 import Badge, { type BadgeColor } from "@/components/ui/Badge";
 import { useDashboardFilters } from "@/lib/dashboardFilters";
-import type { SprintBoardResult, SprintPace, SprintProgressResult, SprintSnapshot } from "@/lib/jiraSprintTypes";
+import type { SprintBoardResult, SprintPace, SprintSnapshot } from "@/lib/jiraSprintTypes";
 import { STRATEGISTS } from "@/lib/strategists";
+import { useSprintProgress } from "@/lib/useSprintProgress";
 
-const REFRESH_MS = 60_000;
 const NAME_BY_ID = new Map(STRATEGISTS.map((s) => [s.id, s.name]));
 
 const PACE: Record<SprintPace, { label: string; color: BadgeColor; bar: string }> = {
@@ -21,38 +21,6 @@ const MONTHS = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "
 function shortDate(iso: string): string {
   const [y, m, d] = iso.split("-").map(Number);
   return `${d} ${MONTHS[m - 1]}${y !== new Date().getFullYear() ? ` ${y}` : ""}`;
-}
-
-/** Polls the server every minute while the tab is on screen, and again as soon as the user comes back to it. */
-function useSprintProgress() {
-  const [data, setData] = useState<SprintProgressResult | null>(null);
-  const [failed, setFailed] = useState(false);
-
-  const load = useCallback(async (refresh: boolean) => {
-    try {
-      const res = await fetch(`/api/jira/sprints${refresh ? "?refresh=1" : ""}`, { cache: "no-store" });
-      if (!res.ok) throw new Error(String(res.status));
-      setData((await res.json()) as SprintProgressResult);
-      setFailed(false);
-    } catch {
-      setFailed(true);
-    }
-  }, []);
-
-  useEffect(() => {
-    const whenVisible = () => {
-      if (document.visibilityState === "visible") void load(false);
-    };
-    whenVisible();
-    const timer = setInterval(whenVisible, REFRESH_MS);
-    document.addEventListener("visibilitychange", whenVisible);
-    return () => {
-      clearInterval(timer);
-      document.removeEventListener("visibilitychange", whenVisible);
-    };
-  }, [load]);
-
-  return { data, failed, load };
 }
 
 function useNow(everyMs: number): number {
@@ -75,16 +43,16 @@ function Bar({ done, inProgress, total, color, expectedPct, label }: { done: num
   const pct = (n: number) => (total > 0 ? (n / total) * 100 : 0);
   return (
     <div role="img" aria-label={label} className="relative h-2.5 w-full rounded-full bg-[var(--bp-surface-alt)]">
-      <div className="absolute inset-y-0 left-0 overflow-hidden rounded-full" style={{ width: `${pct(done + inProgress)}%` }}>
+      <div className="bp-bar absolute inset-y-0 left-0 overflow-hidden rounded-full" style={{ width: `${pct(done + inProgress)}%` }}>
         <div className="h-full w-full opacity-25" style={{ background: color }} />
       </div>
-      <div className="absolute inset-y-0 left-0 rounded-full transition-[width] duration-500" style={{ width: `${pct(done)}%`, background: color }} />
+      <div className="bp-bar absolute inset-y-0 left-0 rounded-full transition-[width] duration-500" style={{ width: `${pct(done)}%`, background: color }} />
       {expectedPct !== undefined && (
         <span
           aria-hidden
           className="absolute -top-1 h-[18px] w-0.5 rounded-full bg-[var(--bp-ink)]"
           style={{ left: `calc(${expectedPct}% - 1px)` }}
-          title={`Avance esperado hoy: ${expectedPct}%`}
+          data-tip={`Avance esperado hoy: ${expectedPct}%`}
         />
       )}
     </div>
@@ -142,7 +110,7 @@ function SprintCard({ board, sprint }: { board: SprintBoardResult; sprint: Sprin
           <ul className="mt-2 flex flex-col gap-2">
             {sprint.epics.map((e) => (
               <li key={e.key ?? "none"} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1">
-                <span className="truncate text-[12px] text-[var(--bp-ink)]" title={e.name}>
+                <span className="truncate text-[12px] text-[var(--bp-ink)]" data-tip={e.name}>
                   {e.key && <span className="mr-1.5 font-mono text-[10px] text-[var(--bp-ink-soft)]">{e.key}</span>}
                   {e.name}
                 </span>

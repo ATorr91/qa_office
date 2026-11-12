@@ -8,7 +8,7 @@ export default function EntregaMvpTemplatePage() {
   return (
     <div className="relative min-h-screen">
       <Link
-        href="/"
+        href="/portal"
         className="fixed right-4 top-3 z-10 rounded-full bg-black/40 px-3 py-1.5 text-[12px] font-medium text-white backdrop-blur-sm transition-colors hover:bg-black/60"
       >
         ← Volver al portal

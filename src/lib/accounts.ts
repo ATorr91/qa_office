@@ -15,15 +15,15 @@ export interface Account {
 }
 
 const BASE_ACCOUNTS: Account[] = [
-  { key: "cemex", name: "Cemex", aliases: ["cemex"], strategists: ["johanna-quiroga"] },
-  { key: "apac", name: "APAC", aliases: ["apac"], strategists: ["johanna-quiroga", "lucero-cervantes"] },
+  { key: "cemex", name: "Cemex", aliases: ["cemex"], strategists: [] },
+  { key: "apac", name: "APAC", aliases: ["apac"], strategists: [] },
   { key: "kumpel", name: "Kumpel", aliases: ["kumpel"], strategists: ["alexis-aguilar"] },
   { key: "transpais", name: "Transpaís", aliases: ["transpais"], strategists: ["alexis-aguilar"] },
   { key: "eximware", name: "Eximware", aliases: ["eximware"], strategists: ["daniel-gamboa"] },
   { key: "deiman", name: "Deiman", aliases: ["deiman"], strategists: ["camila"] },
   { key: "peak", name: "PEAK", aliases: ["peak"], strategists: ["jorge-de-buen"] },
   { key: "hogares-union", name: "Hogares Unión", aliases: ["hogaresunion"], strategists: ["luis-rodriguez", "adriana-ruiz"] },
-  { key: "fmf", name: "FMF Liga MX", aliases: ["fmf"], strategists: ["daniel-gamboa", "lucero-cervantes", "camila"] },
+  { key: "fmf", name: "FMF Liga MX", aliases: ["fmf"], strategists: ["daniel-gamboa", "camila"] },
   { key: "sales-train", name: "Sales Train", aliases: ["salestrain"], strategists: ["alexis-aguilar"] },
   { key: "fieldedge", name: "FieldEdge", aliases: ["fieldedge"], strategists: [] },
   { key: "aht", name: "AHT", aliases: ["aht"], strategists: ["camila"] },

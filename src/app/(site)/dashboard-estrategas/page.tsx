@@ -13,15 +13,17 @@ import OkrKpiTab from "@/components/dashboard/tabs/OkrKpiTab";
 import PeerReviewsTab from "@/components/dashboard/tabs/PeerReviewsTab";
 import PerformanceTab from "@/components/dashboard/tabs/PerformanceTab";
 import QaTab from "@/components/dashboard/tabs/QaTab";
+import ProyectosTab from "@/components/dashboard/tabs/ProyectosTab";
 import SprintProgressTab from "@/components/dashboard/tabs/SprintProgressTab";
 import { useDashboardFilters } from "@/lib/dashboardFilters";
 
 const TABS = [
-  { value: "desempeno", label: "Evaluación de desempeño" },
+  { value: "desempeno", label: "Desempeño" },
   { value: "peer", label: "Peer reviews" },
   { value: "okr", label: "OKRs y KPIs" },
   { value: "deadlines", label: "Deadlines" },
   { value: "sprint", label: "Avance del sprint" },
+  { value: "proyectos", label: "Proyectos" },
   { value: "bitacoras", label: "Bitácoras" },
   { value: "qa", label: "Calificación QA" },
   { value: "autoevaluacion", label: "Autoevaluación" },
@@ -32,6 +34,8 @@ const TABS = [
 
 type Tab = (typeof TABS)[number]["value"];
 
+const LIVE_TABS: ReadonlySet<Tab> = new Set<Tab>(["autoevaluacion", "sprint", "proyectos"]);
+
 // Every tab starts with a note saying where its numbers come from. All panels stay mounted so switching tabs is instant.
 const PANELS: { value: Tab; Component: () => React.JSX.Element | null }[] = [
   { value: "desempeno", Component: PerformanceTab },
@@ -39,6 +43,7 @@ const PANELS: { value: Tab; Component: () => React.JSX.Element | null }[] = [
   { value: "okr", Component: OkrKpiTab },
   { value: "deadlines", Component: DeadlinesTab },
   { value: "sprint", Component: SprintProgressTab },
+  { value: "proyectos", Component: ProyectosTab },
   { value: "bitacoras", Component: BitacorasTab },
   { value: "qa", Component: QaTab },
   { value: "nps", Component: NpsTab },
@@ -120,17 +125,17 @@ export default function DashboardEstrategasPage() {
               }`}
             >
               {t.label}
-              {tab === t.value && <span className="absolute inset-x-0 -bottom-px h-0.5 rounded-full bg-[var(--bp-blue)]" />}
+              {tab === t.value && <span className="bp-underline absolute inset-x-0 -bottom-px h-0.5 rounded-full bg-[var(--bp-blue)]" />}
             </button>
             </Fragment>
           ))}
         </div>
 
         {PANELS.map(({ value, Component }) => (
-          <div key={value} role="tabpanel" id={`panel-${value}`} aria-labelledby={`tab-${value}`} className={`mt-5 ${tab === value ? "flex flex-col gap-4" : "hidden"}`}>
+          <div key={value} role="tabpanel" id={`panel-${value}`} aria-labelledby={`tab-${value}`} className={`mt-5 ${tab === value ? "bp-row-in flex flex-col gap-4" : "hidden"}`}>
             <SourceNote tab={value as SourceTab} />
-            {/* Autoevaluación (admin-only data) and Avance del sprint (live Jira polling) only mount while they are the open tab. */}
-            {((value !== "autoevaluacion" && value !== "sprint") || tab === value) && <Component />}
+            {/* Autoevaluación (admin-only data) and the tabs that poll live data (Jira, projects, hours, tools) only mount while they are the open tab. */}
+            {(!LIVE_TABS.has(value) || tab === value) && <Component />}
           </div>
         ))}
       </div>

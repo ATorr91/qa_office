@@ -19,7 +19,7 @@ export function SeverityBarChart({ data }: { data: BugsBySeverity }) {
             <div className="w-12 shrink-0 text-[11px] font-medium text-[var(--bp-ink-soft)]">{row.label}</div>
             <div className="h-2 flex-1 rounded-[var(--bp-radius-pill)] bg-[var(--bp-surface-alt)]">
               <div
-                className="h-full rounded-[var(--bp-radius-pill)] transition-all duration-[var(--bp-dur)]"
+                className="bp-bar h-full rounded-[var(--bp-radius-pill)] transition-all duration-[var(--bp-dur)]"
                 style={{ width: `${(value / max) * 100}%`, backgroundColor: row.color }}
               />
             </div>

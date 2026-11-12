@@ -80,7 +80,7 @@ export function AutoevaluacionTab() {
           )}
         </div>
         <div className="flex gap-2">
-          <Button kind="outline" size="sm" onClick={processNow} disabled={processing} title="Envía lo programado, manda recordatorios y cierra lo vencido">
+          <Button kind="outline" size="sm" onClick={processNow} disabled={processing} data-tip="Envía lo programado, manda recordatorios y cierra lo vencido">
             {processing ? "Procesando…" : "Procesar pendientes ahora"}
           </Button>
           <Button kind="primary" size="sm" onClick={() => setCreating((v) => !v)}>

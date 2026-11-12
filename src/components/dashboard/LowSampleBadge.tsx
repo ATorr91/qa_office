@@ -7,7 +7,7 @@ export const MIN_RELIABLE_DEADLINES = 20;
 export function LowSampleBadge({ assigned }: { assigned: number }) {
   if (assigned <= 0 || assigned >= MIN_RELIABLE_DEADLINES) return null;
   return (
-    <span title={`Solo ${assigned} incidencias con fecha límite en el periodo (menos de ${MIN_RELIABLE_DEADLINES}): un lote tardío cambia mucho el porcentaje.`}>
+    <span data-tip={`Solo ${assigned} incidencias con fecha límite en el periodo (menos de ${MIN_RELIABLE_DEADLINES}): un lote tardío cambia mucho el porcentaje.`}>
       <Badge color="warning" dot={false} className="ml-1.5 !px-1.5 !py-0 !text-[10px]">
         pocos datos
       </Badge>

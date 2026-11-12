@@ -25,7 +25,7 @@ export function BarList({ items, maxValue = 100 }: { items: BarListItem[]; maxVa
             </div>
             <div className="h-1.5 w-full overflow-hidden rounded-full bg-[var(--bp-surface-alt)]">
               <div
-                className="h-full rounded-full transition-all duration-500 ease-out"
+                className="bp-bar h-full rounded-full transition-all duration-500 ease-out"
                 style={{ width: `${pct}%`, backgroundColor: color }}
               />
             </div>

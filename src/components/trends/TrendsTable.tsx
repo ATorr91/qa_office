@@ -132,7 +132,7 @@ export function TrendsTable({
                   <div className="flex items-center gap-1.5">
                     {top && (
                       <span
-                        title={`Top ${rank} — mayor puntaje combinado`}
+                        data-tip={`Top ${rank} — mayor puntaje combinado`}
                         className="rounded-[var(--bp-radius-pill)] bg-[var(--bp-magenta)] px-1.5 py-0.5 text-[9px] font-bold text-white"
                       >
                         TOP {rank}

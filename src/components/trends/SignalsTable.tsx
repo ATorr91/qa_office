@@ -117,7 +117,7 @@ export function SignalsTable({
                     <div className="flex items-center gap-1.5">
                       {top && (
                         <span
-                          title={`Top ${rank} — señal más relevante`}
+                          data-tip={`Top ${rank} — señal más relevante`}
                           className="rounded-[var(--bp-radius-pill)] bg-[var(--bp-magenta)] px-1.5 py-0.5 text-[9px] font-bold text-white"
                         >
                           TOP {rank}
@@ -161,7 +161,7 @@ export function SignalsTable({
                     <div className="flex items-center justify-end gap-1">
                       <button
                         type="button"
-                        title="Ver más detalles"
+                        data-tip="Ver más detalles" aria-label="Ver más detalles"
                         onClick={() => onViewDetails(s)}
                         className="bp-tap flex h-6 w-6 items-center justify-center rounded-[var(--bp-radius-sm)] text-[var(--bp-ink-soft)] transition-transform duration-[var(--bp-dur-fast)] hover:scale-110 hover:bg-[var(--bp-surface-alt)]"
                       >
@@ -172,7 +172,7 @@ export function SignalsTable({
                       </button>
                       <button
                         type="button"
-                        title="Buena tendencia"
+                        data-tip="Buena tendencia" aria-label="Buena tendencia"
                         onClick={() => onFeedback(s.id, "good")}
                         className={`bp-tap flex h-6 w-6 items-center justify-center rounded-[var(--bp-radius-sm)] transition-transform duration-[var(--bp-dur-fast)] hover:scale-125 hover:bg-[var(--bp-surface-alt)] ${
                           fb === "good" ? "text-[var(--bp-success)]" : "text-[var(--bp-ink-soft)]"
@@ -182,7 +182,7 @@ export function SignalsTable({
                       </button>
                       <button
                         type="button"
-                        title="No me aporta valor"
+                        data-tip="No me aporta valor" aria-label="No me aporta valor"
                         onClick={() => onFeedback(s.id, "bad")}
                         className={`bp-tap flex h-6 w-6 items-center justify-center rounded-[var(--bp-radius-sm)] transition-transform duration-[var(--bp-dur-fast)] hover:scale-125 hover:bg-[var(--bp-surface-alt)] ${
                           fb === "bad" ? "text-[var(--bp-danger)]" : "text-[var(--bp-ink-soft)]"
@@ -192,7 +192,7 @@ export function SignalsTable({
                       </button>
                       <button
                         type="button"
-                        title="Eliminar de resultados"
+                        data-tip="Eliminar de resultados" aria-label="Eliminar de resultados"
                         onClick={() => onDismiss(s.id)}
                         className="bp-tap flex h-6 w-6 items-center justify-center rounded-[var(--bp-radius-sm)] text-[var(--bp-ink-soft)] transition-transform duration-[var(--bp-dur-fast)] hover:scale-110 hover:bg-[var(--bp-surface-alt)] hover:text-[var(--bp-danger)]"
                       >
